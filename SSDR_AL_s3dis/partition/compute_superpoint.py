@@ -103,4 +103,29 @@ def test_superpoint_distribution(args):
         sp_count = sp_count + len(components)
         for sp in components:
             sp_size = len(sp)
-            point_count = point_count
+            point_count = point_count + sp_size
+            tt = int(sp_size / 10)
+            dis[tt] = dis[tt] + 1
+
+    mean_size = point_count / sp_count
+    print("######### test_superpoint_less_than_5")
+    for i in range(len(dis)):
+        if dis[i] > 0:
+            print(str(i*10)+"-"+str((i+1)*10)+": " + str(dis[i]))
+    print("point_count=" + str(point_count), "sp_count=" + str(sp_count), "mean_size=" + str(mean_size))
+    print("#####################################")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='123434234')
+    parser.add_argument('--dataset', default='s3dis', help='s3dis/sema3d/your_dataset')
+    parser.add_argument('--k_nn_geof', default=45, type=int, help='number of neighbors for the geometric features')
+    parser.add_argument('--k_nn_adj', default=10, type=int, help='adjacency structure for the minimal partition')
+    parser.add_argument('--lambda_edge_weight', default=1., type=float,
+                        help='parameter determine the edge weight for minimal part.')
+    parser.add_argument('--reg_strength', default=0.008, type=float,
+                        help='regularization strength for the minimal partition')
+    parser.add_argument('--test_area', type=int, default=5, help='Which area to use for test, option: 1-6 [default: 5]')
+
+    args = parser.parse_args()
+    s3dis_superpoint(args, "Area_5")
+    test_superpoint_distribution(args)
