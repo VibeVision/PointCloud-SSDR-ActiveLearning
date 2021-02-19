@@ -64,4 +64,57 @@ def semantic3d_superpoint(args):
         xyz = np.vstack((data['x'], data['y'], data['z'])).T
         # xyz = xyz.astype('f4')
         # rgb = rgb.astype('uint8')
-        # ---compute 10 nn g
+        # ---compute 10 nn graph-------
+        graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
+        # ---compute geometric features-------
+        geof = libply_c.compute_geof(xyz, target_fea, args.k_nn_geof).astype(
+                'float32')
+        del target_fea
+        # --compute the partition------
+        # --- build the spg h5 file --
+        features = geof
+        geof[:, 3] = 2. * geof[:, 3]
+
+        graph_nn["edge_weight"] = np.array(
+                1. / (args.lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])),
+                dtype='float32')
+        print("minimal partition...")
+
+        components, in_component = libcp.cutpursuit(features, graph_nn["source"], graph_nn["target"]
+                                                        , graph_nn["edge_weight"], args.reg_strength)
+        components = np.array(components, dtype='object')
+        sp = {}
+        sp["components"] = components
+        sp["in_component"] = in_component
+        with open(os.path.join(output_dir, cloud_name+".superpoint"),"wb") as f:
+            pickle.dump(sp, f)
+
+        pseudo_gt = np.zeros([2, len(xyz)], dtype=np.float32)
+        with open(os.path.join(output_dir, cloud_name+".gt"), "wb") as f:
+            pickle.dump(pseudo_gt, f)
+
+        sp_num = sp_num + len(components)
+        file_num = file_num + 1
+        point_num = point_num + len(xyz)
+
+        total_obj["unlabeled"][cloud_name] = np.arange(len(components))
+
+    total_obj["file_num"] = file_num
+    total_obj["sp_num"] = sp_num
+    total_obj["point_num"] = point_num
+
+    with open(os.path.join(output_dir, "total.pkl"), "wb") as f:
+        pickle.dump(total_obj, f)
+
+    print("file_num", file_num, "sp_num", sp_num, "point_num", point_num)
+
+
+def test_superpoint_distribution(args):
+    all_files = glob.glob(os.path.join('data/semantic3d', str(args.reg_strength), 'superpoint', '*.superpoint'))
+    sp_count = 0
+    point_count = 0
+
+    dis = np.zeros([1000000])
+
+    for i, file_path in enumerate(all_files):
+        with open(file_path, "rb"
