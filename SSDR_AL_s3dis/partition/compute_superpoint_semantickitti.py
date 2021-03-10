@@ -64,4 +64,58 @@ def semantickitti_superpoint(args, val_split):
             # components [sp_idx, point_ids]  是一个二维list ,
             # in_component  [point_idx, sp_idx], in_component 中的in 就是 jndex 缩写
             components, in_component = libcp.cutpursuit(features, graph_nn["source"], graph_nn["target"]
-                                                      
+                                                        , graph_nn["edge_weight"], args.reg_strength)
+            components = np.array(components, dtype='object')
+            sp = {}
+            sp["components"] = components
+            sp["in_component"] = in_component
+            with open(os.path.join(output_dir, cloud_name + ".superpoint"), "wb") as f:
+                pickle.dump(sp, f)
+
+            pseudo_gt = np.zeros([2, len(xyz)], dtype=np.float32)
+            with open(os.path.join(output_dir, cloud_name + ".gt"), "wb") as f:
+                pickle.dump(pseudo_gt, f)
+
+            sp_num = sp_num + len(components)
+            file_num = file_num + 1
+            point_num = point_num + len(xyz)
+
+            total_obj["unlabeled"][cloud_name] = np.arange(len(components))
+
+    total_obj["file_num"] = file_num
+    total_obj["sp_num"] = sp_num
+    total_obj["point_num"] = point_num
+
+    with open(os.path.join(output_dir, "total.pkl"), "wb") as f:
+        pickle.dump(total_obj, f)
+
+    print("file_num", file_num, "sp_num", sp_num, "point_num", point_num)
+
+
+def test_superpoint_distribution(args):
+    all_files = glob.glob(os.path.join('data/SemanticKITTI', str(args.reg_strength), 'superpoint', '*.superpoint'))
+    sp_count = 0
+    point_count = 0
+
+    dis = np.zeros([10000])
+
+    for i, file_path in enumerate(all_files):
+        with open(file_path, "rb") as f:
+            superpoint = pickle.load(f)
+        components = superpoint["components"]
+        sp_count = sp_count + len(components)
+        for sp in components:
+            sp_size = len(sp)
+            point_count = point_count + sp_size
+            tt = int(sp_size / 10)
+            dis[tt] = dis[tt] + 1
+
+    mean_size = point_count / sp_count
+    print("######### test_superpoint_less_than_5")
+    for i in range(len(dis)):
+        if dis[i] > 0:
+            print(str(i*10)+"-"+str((i+1)*10)+": " + str(dis[i]))
+    print("point_count=" + str(point_count), "sp_count=" + str(sp_count), "mean_size=" + str(mean_size))
+    print("#####################################")
+
+if __name__ == "__main__
