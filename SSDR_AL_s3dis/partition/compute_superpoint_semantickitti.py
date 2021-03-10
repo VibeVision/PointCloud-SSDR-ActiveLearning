@@ -118,4 +118,15 @@ def test_superpoint_distribution(args):
     print("point_count=" + str(point_count), "sp_count=" + str(sp_count), "mean_size=" + str(mean_size))
     print("#####################################")
 
-if __name__ == "__main__
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='123434234')
+    parser.add_argument('--k_nn_geof', default=45, type=int, help='number of neighbors for the geometric features')
+    parser.add_argument('--k_nn_adj', default=10, type=int, help='adjacency structure for the minimal partition')
+    parser.add_argument('--lambda_edge_weight', default=1., type=float,
+                        help='parameter determine the edge weight for minimal part.')
+    parser.add_argument('--reg_strength', default=0.012, type=float,
+                        help='regularization strength for the minimal partition')
+
+    args = parser.parse_args()
+    semantickitti_superpoint(args, "08-")
+    test_superpoint_distribution(args)
