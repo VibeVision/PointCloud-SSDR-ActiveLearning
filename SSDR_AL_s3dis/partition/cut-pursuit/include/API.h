@@ -64,4 +64,39 @@
 //      0 : slow but precise
 //      1 : recommended (default)
 //      2 : fast but approximated (no backward step)
-//      3 : lud
+//      3 : ludicrous - for prototyping (no backward step)
+// 1x1 float weight_decay : weight decay to compute the optimal binary partition
+// 1x1 bool verose : verbosity
+//      0 : silent
+//      1 : recommended (default)
+//      2 : chatty
+//-----OUTPUT-----
+// Nx1 float  solution: piecewise constant approximation
+// Nx1 uint32_t inComponent: for each node, in which component it belongs
+// n_node_redx1 cell components : for each component, list of the nodes
+// 1x1 n_node_red : number of components
+// 1x1 uint32_t n_edges_red : number of edges in reduced graph
+// n_edges_redx1 uint32_t Eu_red, Ev_red : source and target of reduced edges
+// n_edges_redx1 float edgeWeight_red: weights of reduced edges
+// n_node_redx1  float nodeWeight_red: weights of reduced nodes
+//---------------SEGMENTATION--------------------------------------------------
+//for the segmentation, the functions has a few extra argumens allowing to
+//record the structrue of the reduced graph
+//C++ style input
+//void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+//          , std::vector< std::vector<T> > & observation
+//          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+//          ,const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+//          ,std::vector< std::vector<T> > & solution,
+//          , const std::vector<uint32_t> & in_component
+//	    , std::vector< std::vector<uint32_t> > & components
+//          , uint32_t & n_nodes_red, uint32_t & n_edges_red
+//          , std::vector<uint32_t> & Eu_red, std::vector<uint32_t> & Ev_red
+//          , std::vector<T> & edgeWeight_red, std::vector<T> & nodeWeight_red
+//  	    , const T lambda, const T mode, const T speed, const T weight_decay
+//          , const float verbose)
+//-----EXTRA INPUT-----
+// Nx1 uint32_t inComponent: for each node, in which component it belongs
+// 1x1 n_node_red : number of components
+// 1x1 uint32_t n_edges_red : number of edges in reduced graph
+// n_node_redx1 cell component
