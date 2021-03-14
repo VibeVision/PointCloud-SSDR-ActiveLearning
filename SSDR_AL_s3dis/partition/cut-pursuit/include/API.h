@@ -27,4 +27,41 @@
 //---------------REGULARIZATION---------------------------------------------------
 //C style inputs
 //void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
-//          ,const T * 
+//          ,const T * observation, const uint32_t * Eu, const uint32_t * Ev
+//          ,const T * edgeWeight, const T * nodeWeight
+//          ,T * solution,  const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+//          , const float verbose)
+//C++ style input
+//void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+//          , std::vector< std::vector<T> > & observation
+//          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+//          ,const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+//          ,std::vector< std::vector<T> > & solution,  const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+//          , const float verbose)
+// when D = 1
+//void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+//          , std::vector<T> & observation
+//          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+//          ,const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+//          ,std::vector<T> & solution,  const T lambda, const uint32_t cutoff, const T mode, const T speed
+//         , const float verbose)
+
+//-----INPUT-----
+// 1x1 uint32_t n_nodes = number of nodes
+// 1x1 uint32_t n_edges = number of edges
+// 1x1 uint32_t nObs   = dimension of data on each node
+// NxD float observation : the observed signal
+// Ex1 uint32_t Eu, Ev: the origin and destination of each node
+// Ex1 float edgeWeight: the edge weight
+// Nx1 float nodeWeight: the node weight
+// 1x1 float lambda : the regularization strength
+// 1x1 uint32_t cutoff : minimal component size
+// 1x1 float mode : the fidelity function
+//      0 : linear (for simplex bound data)
+//      1 : quadratic (default)
+//   0<a<1: KL with a smoothing (for simplex bound data)
+// 1x1 float speed : parametrization impacting performance
+//      0 : slow but precise
+//      1 : recommended (default)
+//      2 : fast but approximated (no backward step)
+//      3 : lud
