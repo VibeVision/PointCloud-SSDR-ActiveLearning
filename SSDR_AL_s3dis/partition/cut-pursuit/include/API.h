@@ -99,4 +99,75 @@
 // Nx1 uint32_t inComponent: for each node, in which component it belongs
 // 1x1 n_node_red : number of components
 // 1x1 uint32_t n_edges_red : number of edges in reduced graph
-// n_node_redx1 cell component
+// n_node_redx1 cell components : for each component, list of the nodes
+// n_edges_redx1 uint32_t Eu_red, Ev_red : source and target of reduced edges
+// n_edges_redx1 float edgeWeight_red: weights of reduced edges
+// n_node_redx1  float nodeWeight_red: weights of reduced nodes
+
+
+namespace CP {
+//===========================================================================
+//=====================    CREATE_CP      ===================================
+//===========================================================================
+
+template<typename T>
+CP::CutPursuit<T> * create_CP(const T mode, const float verbose)
+{
+    CP::CutPursuit<float> * cp = NULL;
+    fidelityType fidelity = L2;
+    if (mode == 0)
+    {
+        if (verbose > 0)
+        {
+            std::cout << " WITH LINEAR FIDELITY" << std::endl;
+        }
+        fidelity = linear;
+        cp = new CP::CutPursuit_Linear<float>();
+     }
+     else if (mode == 1)
+     {
+        if (verbose > 0)
+        {
+            std::cout << " WITH L2 FIDELITY" << std::endl;
+        }
+        fidelity = L2;
+        cp = new CP::CutPursuit_L2<float>();
+     }
+     else if (mode > 0 && mode < 1)
+     {
+        if (verbose > 0)
+        {
+            std::cout << " WITH KULLBACK-LEIBLER FIDELITY SMOOTHING : "
+                      << mode << std::endl;
+        }
+        fidelity = KL;
+        cp = new CP::CutPursuit_KL<float>();
+        cp->parameter.smoothing = mode;
+     }
+	 else if (mode == -1)
+	 {
+        if (verbose > 0)
+        {
+            std::cout << " WITH ALTERNATE L2 NORM : "
+                      << mode << std::endl;
+        }
+        fidelity = SPG;
+        cp = new CP::CutPursuit_KL<float>();
+        cp->parameter.smoothing = mode;
+	 }
+	 else if (mode == 2)
+	 {
+        if (verbose > 0)
+        {
+            std::cout << " PARTITION MODE WITH SPATIAL INFORMATION : "
+                      << mode << std::endl;
+        }
+        fidelity = SPG;
+        cp = new CP::CutPursuit_SPG<float>();
+        cp->parameter.smoothing = mode;
+	 }		
+     else
+     {
+        std::cout << " UNKNOWN MODE, SWICTHING TO L2 FIDELITY"
+                << std::endl;
+     
