@@ -170,4 +170,47 @@ CP::CutPursuit<T> * create_CP(const T mode, const float verbose)
      {
         std::cout << " UNKNOWN MODE, SWICTHING TO L2 FIDELITY"
                 << std::endl;
-     
+        fidelity = L2;
+        cp = new CP::CutPursuit_L2<float>();
+     }
+     cp->parameter.fidelity = fidelity;
+     cp->parameter.verbose  = verbose;
+     return cp;
+}
+//===========================================================================
+//=== cut_pursuit segmentation C-style - with reduced graph  ================
+//===========================================================================
+template<typename T>
+void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+          , const T * observation
+          , const uint32_t * Eu, const uint32_t * Ev
+          , const T * edgeWeight, const T * nodeWeight
+          , T * solution
+	      , std::vector< uint32_t > & in_component, std::vector< std::vector<uint32_t> > & components
+          , uint32_t & n_nodes_red, uint32_t & n_edges_red
+          , std::vector< uint32_t > & Eu_red, std::vector<uint32_t> & Ev_red
+          , std::vector< T > & edgeWeight_red, std::vector< T > & nodeWeight_red
+  	      , const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+          , const float verbose)
+{   //C-style ++ interface
+    std::srand (1);
+    if (verbose > 0)
+    {
+        std::cout << "L0-CUT PURSUIT";
+    }
+    //--------parameterization---------------------------------------------
+    CP::CutPursuit<T> * cp = create_CP(mode, verbose);
+
+    set_speed(cp, speed, weight_decay, verbose);
+    set_up_CP(cp, n_nodes, n_edges, nObs, observation, Eu, Ev
+             ,edgeWeight, nodeWeight);
+    cp->parameter.reg_strenth = lambda;
+	cp->parameter.cutoff = cutoff;
+    //-------run the optimization------------------------------------------
+    cp->run();
+    cp->compute_reduced_graph();
+    //------------resize the vectors-----------------------------
+    n_nodes_red = boost::num_vertices(cp->reduced_graph);
+    n_edges_red = boost::num_edges(cp->reduced_graph);
+    in_component.resize(n_nodes);
+    components.resize(n_nodes_red);
