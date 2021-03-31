@@ -355,4 +355,52 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
             boost::vertex_bundle, cp->main_graph);
     uint32_t ind_sol = 0;	
     VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
-    for(uint32_t ind_nod
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {        
+        for(uint32_t i_dim=0; i_dim < nObs; i_dim++)
+        {
+            solution[ind_sol] = vertex_attribute_map[*ite_nod].value[i_dim];
+            ind_sol++;
+        }
+        ite_nod++;
+   	}
+    //------------fill the components-----------------------------
+	//VertexAttributeMap<T> vertex_attribute_map = boost::get(
+    //        boost::vertex_bundle, cp->main_graph);
+    VertexIndexMap<T> vertex_index_map = get(boost::vertex_index, cp->main_graph);
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+		uint32_t component_size = cp->components[ind_nod_red].size();
+		    components[ind_nod_red] = std::vector<uint32_t>(component_size, 0);
+		for(uint32_t ind_nod = 0; ind_nod < component_size; ind_nod++ )
+		{
+			components[ind_nod_red][ind_nod] = vertex_index_map(cp->components[ind_nod_red][ind_nod]);
+		}	
+    }
+    ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        in_component[ind_nod] = vertex_attribute_map[*ite_nod].in_component;
+        ite_nod++;
+    }
+    delete cp;
+    return;
+}
+//===========================================================================
+//=====================  cut_pursuit  C++-style 15 ============================
+//===========================================================================
+template<typename T>
+void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+          , std::vector< std::vector<T> > & observation
+          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+          , const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+          , std::vector< std::vector<T> > & solution,  const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+          , const float verbose)
+{   //C-style ++ interface
+    std::srand (1);
+    if (verbose > 0)
+    {
+        std::cout << "L0-CUT PURSUIT";
+    }
+    //--------parameterization---------------------------------------------
+    CP::CutPursuit<
