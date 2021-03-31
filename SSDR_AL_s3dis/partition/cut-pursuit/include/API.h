@@ -306,4 +306,53 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
     VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
     for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
     {        
-     
+        for(uint32_t i_dim=0; i_dim < nObs; i_dim++)
+        {
+            solution[ind_sol] = vertex_attribute_map[*ite_nod].value[i_dim];
+            ind_sol++;
+        }
+        ite_nod++;
+   }
+    delete cp;
+    return;
+}
+
+//===========================================================================
+//=============  cut_pursuit segmentation with C-style input 17 ================
+//===========================================================================
+template<typename T>
+void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+          , const T * observation
+          , const uint32_t * Eu, const uint32_t * Ev
+          , const T * edgeWeight, const T * nodeWeight
+          , T * solution
+	  , std::vector<uint32_t> & in_component, std::vector< std::vector<uint32_t> > & components
+  	  , const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+          , const float verbose)
+{   //C-style ++ interface
+    std::srand (1);
+	//this one //
+    if (verbose > 0)
+    {
+        std::cout << "L0-CUT PURSUIT";
+    }
+    //--------parameterization---------------------------------------------
+    CP::CutPursuit<T> * cp = create_CP(mode, verbose);
+    set_speed(cp, speed, weight_decay, verbose);
+    set_up_CP(cp, n_nodes, n_edges, nObs, observation, Eu, Ev
+             ,edgeWeight, nodeWeight);
+    cp->parameter.reg_strenth = lambda;
+	cp->parameter.cutoff = cutoff;
+    //-------run the optimization------------------------------------------
+    cp->run();
+    cp->compute_reduced_graph();
+    //------------resize the vectors-----------------------------
+    uint32_t n_nodes_red = boost::num_vertices(cp->reduced_graph);
+    in_component.resize(n_nodes);
+    components.resize(n_nodes_red);
+    //------------write the solution-----------------------------
+    VertexAttributeMap<T> vertex_attribute_map = boost::get(
+            boost::vertex_bundle, cp->main_graph);
+    uint32_t ind_sol = 0;	
+    VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod
