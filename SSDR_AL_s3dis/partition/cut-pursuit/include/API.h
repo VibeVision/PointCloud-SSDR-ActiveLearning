@@ -214,3 +214,48 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
     n_edges_red = boost::num_edges(cp->reduced_graph);
     in_component.resize(n_nodes);
     components.resize(n_nodes_red);
+    Eu_red.resize(n_edges_red);
+    Ev_red.resize(n_edges_red);
+    edgeWeight_red.resize(n_edges_red);
+    nodeWeight_red.resize(n_nodes_red);
+    //------------write the solution-----------------------------
+    VertexAttributeMap<T> vertex_attribute_map = boost::get(
+            boost::vertex_bundle, cp->main_graph);
+    uint32_t ind_sol = 0;	
+    VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {        
+        for(uint32_t i_dim=0; i_dim < nObs; i_dim++)
+        {
+            solution[ind_sol] = vertex_attribute_map[*ite_nod].value[i_dim];
+            ind_sol++;
+        }
+        ite_nod++;
+   }
+   //------------fill the components-----------------------------
+    VertexIndexMap<T> vertex_index_map = get(boost::vertex_index, cp->main_graph);
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+	uint32_t component_size = cp->components[ind_nod_red].size();
+        components[ind_nod_red] = std::vector<uint32_t>(component_size, 0);
+		for(uint32_t ind_nod = 0; ind_nod < component_size; ind_nod++ )
+		{
+			components[ind_nod_red][ind_nod] = vertex_index_map(cp->components[ind_nod_red][ind_nod]);
+		}	
+    }
+    //------------write the reduced graph-----------------------------
+    VertexAttributeMap<T> vertex_attribute_map_red = boost::get(
+            boost::vertex_bundle, cp->reduced_graph);
+    EdgeAttributeMap<T> edge_attribute_map_red = boost::get(
+            boost::edge_bundle, cp->reduced_graph);
+    VertexIndexMap<T> vertex_index_map_red = get(boost::vertex_index, cp->reduced_graph);
+    ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        in_component[ind_nod] = vertex_attribute_map[*ite_nod].in_component;
+        ite_nod++;
+    }
+    ite_nod = boost::vertices(cp->reduced_graph).first;
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+	nodeWeight_red[ind_nod_red] = vertex_attribute_map_red[*
