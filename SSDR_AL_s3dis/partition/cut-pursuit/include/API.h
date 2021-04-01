@@ -403,4 +403,49 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
         std::cout << "L0-CUT PURSUIT";
     }
     //--------parameterization---------------------------------------------
-    CP::CutPursuit<
+    CP::CutPursuit<T> * cp = create_CP(mode, verbose);
+    set_speed(cp, speed, weight_decay, verbose);
+    set_up_CP(cp, n_nodes, n_edges, nObs, observation, Eu, Ev
+             ,edgeWeight, nodeWeight);
+    cp->parameter.reg_strenth = lambda;
+	cp->parameter.cutoff = cutoff;
+    //-------run the optimization------------------------------------------
+    cp->run();
+    //------------write the solution-----------------------------
+    VertexAttributeMap<T> vertex_attribute_map = boost::get(
+            boost::vertex_bundle, cp->main_graph);
+    VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {        
+        for(uint32_t ind_dim=0; ind_dim < nObs; ind_dim++)
+        {
+            solution[ind_nod][ind_dim] = vertex_attribute_map[*ite_nod].value[ind_dim];
+        }
+        ite_nod++;
+   }
+    delete cp;
+    return;
+}
+//===========================================================================
+//=====================  cut_pursuit  C++-style 15 ============================
+//===========================================================================
+template<typename T>
+void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+          , std::vector<T>& observation
+          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+          , const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+          , std::vector<T> & solution,  const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+          , const float verbose)
+{   //C-style ++ interface
+    std::srand (1);
+    if (verbose > 0)
+    {
+        std::cout << "L0-CUT PURSUIT";
+    }
+    //--------parameterization---------------------------------------------
+    CP::CutPursuit<T> * cp = create_CP(mode, verbose);
+    set_speed(cp, speed, weight_decay, verbose);
+    set_up_CP(cp, n_nodes, n_edges, nObs, observation, Eu, Ev
+             ,edgeWeight, nodeWeight);
+    cp->parameter.reg_strenth = lambda;
+	cp->para
