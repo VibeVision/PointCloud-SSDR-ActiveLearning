@@ -673,4 +673,48 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
     borders.resize(n_edges_red);
     //------------write the solution-----------------------------
     VertexAttributeMap<T> vertex_attribute_map = boost::get(
-            boost::vertex_bundle, cp->
+            boost::vertex_bundle, cp->main_graph);
+    VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {        
+        for(uint32_t ind_dim=0; ind_dim < nObs; ind_dim++)
+        {
+            solution[ind_nod][ind_dim] = vertex_attribute_map[*ite_nod].value[ind_dim];
+        }
+        ite_nod++;
+    }
+  
+    //------------fill the components-----------------------------
+    VertexIndexMap<T> vertex_index_map = get(boost::vertex_index, cp->main_graph);
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+	uint32_t component_size = cp->components[ind_nod_red].size();
+        components[ind_nod_red] = std::vector<uint32_t>(component_size, 0);
+	for(uint32_t ind_nod = 0; ind_nod < component_size; ind_nod++ )
+    	{
+	    components[ind_nod_red][ind_nod] = vertex_index_map(cp->components[ind_nod_red][ind_nod]);
+	}	
+    }
+    //------------write the reduced graph-----------------------------
+    VertexAttributeMap<T> vertex_attribute_map_red = boost::get(
+            boost::vertex_bundle, cp->reduced_graph);
+    EdgeAttributeMap<T> edge_attribute_map_red = boost::get(
+            boost::edge_bundle, cp->reduced_graph);
+    VertexIndexMap<T> vertex_index_map_red = get(boost::vertex_index, cp->reduced_graph);
+    ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        in_component[ind_nod] = vertex_attribute_map[*ite_nod].in_component;
+        ite_nod++;
+    }
+    ite_nod = boost::vertices(cp->reduced_graph).first;
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+	nodeWeight_red[ind_nod_red] = vertex_attribute_map_red[*ite_nod].weight;
+        ite_nod++;
+    }
+    EdgeIterator<T> ite_edg_red = boost::edges(cp->reduced_graph).first;
+    for(uint32_t ind_edg_red = 0; ind_edg_red < n_edges_red; ind_edg_red++ )
+    {    
+	edgeWeight_red[ind_edg_red] = edge_attribute_map_red[*ite_edg_red].weight;
+	Eu_red[ind_edg_red] = ver
