@@ -717,4 +717,41 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
     for(uint32_t ind_edg_red = 0; ind_edg_red < n_edges_red; ind_edg_red++ )
     {    
 	edgeWeight_red[ind_edg_red] = edge_attribute_map_red[*ite_edg_red].weight;
-	Eu_red[ind_edg_red] = ver
+	Eu_red[ind_edg_red] = vertex_index_map_red(boost::source(*ite_edg_red, cp->reduced_graph));
+	Ev_red[ind_edg_red] = vertex_index_map_red(boost::target(*ite_edg_red, cp->reduced_graph)); 
+	//the order in which the edges are scanned with the iterator doesn not necessarily follow their index
+	uint32_t  ind_edg_red_in_graph = edge_attribute_map_red[*ite_edg_red].index;
+        for(uint32_t ind_edg = 0; ind_edg < cp->borders[ind_edg_red_in_graph].size(); ind_edg++ )
+    	{
+	    //we have to divide the index by 2 to find the corresponding index of input Eu Ev, because of the doubling of edges
+	    borders[ind_edg_red].push_back(edge_attribute_map_red[cp->borders[ind_edg_red_in_graph][ind_edg]].index/2);	  
+	}	   
+        ite_edg_red++;
+    }
+    delete cp;
+    return;
+}
+
+//===========================================================================
+//=====================  cut_pursuit segmentation C++-style D = 1============
+//===========================================================================
+template<typename T>
+void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+          , std::vector<T> & observation
+          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+          , const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+          , std::vector<T> & solution
+	  , std::vector<uint32_t> & in_component, std::vector< std::vector<uint32_t> > & components
+          , uint32_t & n_nodes_red, uint32_t & n_edges_red
+          , std::vector<uint32_t> & Eu_red, std::vector<uint32_t> & Ev_red
+          , std::vector<T> & edgeWeight_red, std::vector<T> & nodeWeight_red
+  	  , const T lambda, const uint32_t cutoff, const T mode, const T speed, const T weight_decay
+          , const float verbose)
+{   //C-style ++ interface
+    std::srand (1);
+	std::cout << "verbose = " << verbose << std::endl;
+    if (verbose > 0)
+    {
+        std::cout << "L0-CUT PURSUIT";
+    }
+    //--------parameterization
