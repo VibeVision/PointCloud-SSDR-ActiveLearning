@@ -800,4 +800,43 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
     VertexAttributeMap<T> vertex_attribute_map_red = boost::get(
             boost::vertex_bundle, cp->reduced_graph);
     EdgeAttributeMap<T> edge_attribute_map_red = boost::get(
-            boo
+            boost::edge_bundle, cp->reduced_graph);
+    VertexIndexMap<T> vertex_index_map_red = get(boost::vertex_index, cp->reduced_graph);
+    ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        in_component[ind_nod] = vertex_attribute_map[*ite_nod].in_component;
+        ite_nod++;
+    }
+    ite_nod = boost::vertices(cp->reduced_graph).first;
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+	nodeWeight_red[ind_nod_red] = vertex_attribute_map_red[*ite_nod].weight;
+        ite_nod++;
+    }
+    EdgeIterator<T> ite_edg_red = boost::edges(cp->reduced_graph).first;
+    for(uint32_t ind_edg_red = 0; ind_edg_red < n_edges_red; ind_edg_red++ )
+    {    
+	edgeWeight_red[ind_edg_red] = edge_attribute_map_red[*ite_edg_red].weight;
+	Eu_red[ind_edg_red] = vertex_index_map_red(boost::source(*ite_edg_red, cp->reduced_graph));
+	Ev_red[ind_edg_red] = vertex_index_map_red(boost::target(*ite_edg_red, cp->reduced_graph)); 
+	//the order in which the edges are scanned with the iterator doesn not necessarily follow their index
+        ite_edg_red++;
+    }
+    delete cp;
+    return;
+}
+//===========================================================================
+//=====================  cut_pursuit_segmentation_full C++-style D = 1============
+//===========================================================================
+template<typename T>
+void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+          , std::vector<T> & observation
+          , const std::vector<uint32_t> & Eu, const std::vector<uint32_t> & Ev
+          , const std::vector<T> & edgeWeight, const std::vector<T> & nodeWeight
+          , std::vector<T> & solution
+	  , std::vector<uint32_t> & in_component, std::vector< std::vector<uint32_t> > & components
+	  , std::vector< std::vector<uint32_t> > & borders
+          , uint32_t & n_nodes_red, uint32_t & n_edges_red
+          , std::vector<uint32_t> & Eu_red, std::vector<uint32_t> & Ev_red
+          , std::v
