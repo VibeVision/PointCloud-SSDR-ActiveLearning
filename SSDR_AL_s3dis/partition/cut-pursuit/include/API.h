@@ -887,4 +887,47 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
         components[ind_nod_red] = std::vector<uint32_t>(component_size, 0);
 	for(uint32_t ind_nod = 0; ind_nod < component_size; ind_nod++ )
     	{
-	    c
+	    components[ind_nod_red][ind_nod] = vertex_index_map(cp->components[ind_nod_red][ind_nod]);
+	}	
+    }
+
+    //------------write the reduced graph-----------------------------
+    VertexAttributeMap<T> vertex_attribute_map_red = boost::get(
+            boost::vertex_bundle, cp->reduced_graph);
+    EdgeAttributeMap<T> edge_attribute_map_red = boost::get(
+            boost::edge_bundle, cp->reduced_graph);
+    VertexIndexMap<T> vertex_index_map_red = get(boost::vertex_index, cp->reduced_graph);
+    ite_nod = boost::vertices(cp->main_graph).first;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        in_component[ind_nod] = vertex_attribute_map[*ite_nod].in_component;
+        ite_nod++;
+    }
+    ite_nod = boost::vertices(cp->reduced_graph).first;
+    for(uint32_t ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++ )
+    {
+	nodeWeight_red[ind_nod_red] = vertex_attribute_map_red[*ite_nod].weight;
+        ite_nod++;
+    }
+    EdgeIterator<T> ite_edg_red = boost::edges(cp->reduced_graph).first;
+    for(uint32_t ind_edg_red = 0; ind_edg_red < n_edges_red; ind_edg_red++ )
+    {   
+	edgeWeight_red[ind_edg_red] = edge_attribute_map_red[*ite_edg_red].weight;
+	Eu_red[ind_edg_red] = vertex_index_map_red(boost::source(*ite_edg_red, cp->reduced_graph));
+	Ev_red[ind_edg_red] = vertex_index_map_red(boost::target(*ite_edg_red, cp->reduced_graph));  
+        for(uint32_t ind_edg = 0; ind_edg < cp->borders.size(); ind_edg++ )
+    	{
+	    borders[ind_edg_red].push_back(edge_attribute_map_red[cp->borders[ind_edg_red]].index);	  
+	}	   
+        ite_edg_red++;
+    }
+    delete cp;
+    return;
+}
+
+//===========================================================================
+//=====================     SET_UP_CP C style   =============================
+//===========================================================================
+template<typename T>
+void set_up_CP(CP::CutPursuit<T> * cp, const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+               ,const T * observation, const uint32_t * Eu, const u
