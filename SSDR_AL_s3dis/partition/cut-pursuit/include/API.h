@@ -1015,4 +1015,48 @@ void set_up_CP(CP::CutPursuit<T> * cp, const uint32_t n_nodes, const uint32_t n_
 //=====================     SET_UP_CP C++ style D = 1========================
 //===========================================================================
 template<typename T>
-void set_up_CP(CP::CutPursuit<T> * cp, const uint32_t n_no
+void set_up_CP(CP::CutPursuit<T> * cp, const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+               ,const std::vector<T> observation, const std::vector<uint32_t> Eu, const std::vector<uint32_t> Ev
+               ,const std::vector<T> edgeWeight, const std::vector<T> nodeWeight)
+{
+    cp->main_graph = Graph<T>(n_nodes);
+    cp->dim = nObs;
+    //--------fill the vertices--------------------------------------------
+    VertexAttributeMap<T> vertex_attribute_map = boost::get(
+            boost::vertex_bundle, cp->main_graph);
+    VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
+    //the node attributes used to fill each node
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        VertexAttribute<T> v_attribute (nObs);
+        //fill the observation of v_attribute
+        v_attribute.observation[0] = observation[ind_nod];
+        //and its weight
+        v_attribute.weight = nodeWeight[ind_nod];
+        //set the attributes of the current node
+        vertex_attribute_map[*ite_nod++] = v_attribute;
+    }
+    //--------build the edges-----------------------------------------------
+    EdgeAttributeMap<T> edge_attribute_map = boost::get(boost::edge_bundle
+            , cp->main_graph);
+    for( uint32_t ind_edg = 0; ind_edg < n_edges; ind_edg++ )
+    {   //add edges in each direction
+        addDoubledge(cp->main_graph, boost::vertex(Eu[ind_edg]
+                    , cp->main_graph), boost::vertex(Ev[ind_edg]
+                    , cp->main_graph), edgeWeight[ind_edg],2 * ind_edg
+                    , edge_attribute_map);
+    }
+}
+//===========================================================================
+//=====================      SET SPEED    ===================================
+//===========================================================================
+template<typename T>
+void set_speed(CP::CutPursuit<T> * cp, const T speed, const T weight_decay, const float verbose)
+{
+    if (speed == 4)
+    {
+         if (verbose > 0)
+        {
+            std::cout << "PARAMETERIZATION = SPECIAL SUPERPOINTGRAPH" << std::endl;
+        }
+        cp->parameter.flow_s
