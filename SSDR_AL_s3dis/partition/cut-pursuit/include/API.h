@@ -930,4 +930,48 @@ void cut_pursuit(const uint32_t n_nodes, const uint32_t n_edges, const uint32_t 
 //===========================================================================
 template<typename T>
 void set_up_CP(CP::CutPursuit<T> * cp, const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
-               ,const T * observation, const uint32_t * Eu, const u
+               ,const T * observation, const uint32_t * Eu, const uint32_t * Ev
+               ,const T * edgeWeight, const T * nodeWeight)
+{
+    cp->main_graph = Graph<T>(n_nodes);
+    cp->dim = nObs;
+    //--------fill the vertices--------------------------------------------
+    VertexAttributeMap<T> vertex_attribute_map = boost::get(
+            boost::vertex_bundle, cp->main_graph);
+    VertexIterator<T> ite_nod = boost::vertices(cp->main_graph).first;
+    //the node attributes used to fill each node
+    uint32_t ind_obs = 0;
+    for(uint32_t ind_nod = 0; ind_nod < n_nodes; ind_nod++ )
+    {
+        VertexAttribute<T> v_attribute (nObs);
+        for(uint32_t i_dim=0; i_dim < nObs; i_dim++)
+        { //fill the observation of v_attribute
+            v_attribute.observation[i_dim] = observation[ind_obs];
+            ind_obs++;
+        }//and its weight
+        v_attribute.weight = nodeWeight[ind_nod];
+        //set the attributes of the current node
+        vertex_attribute_map[*ite_nod++] = v_attribute;
+    }
+    //--------build the edges-----------------------------------------------
+    EdgeAttributeMap<T> edge_attribute_map = boost::get(boost::edge_bundle
+            , cp->main_graph);
+	uint32_t true_ind_edg = 0; //this index count the number of edges ACTUALLY added
+    for( uint32_t ind_edg = 0; ind_edg < n_edges; ind_edg++ )
+    {   //add edges in each direction
+        if (addDoubledge(cp->main_graph, boost::vertex(Eu[ind_edg]
+                    , cp->main_graph), boost::vertex(Ev[ind_edg]
+                    , cp->main_graph), edgeWeight[ind_edg],2 * ind_edg
+                    , edge_attribute_map))
+		{
+			true_ind_edg += 2;	
+		}
+    }
+}
+
+//===========================================================================
+//=====================     SET_UP_CP C++ style  ============================
+//===========================================================================
+template<typename T>
+void set_up_CP(CP::CutPursuit<T> * cp, const uint32_t n_nodes, const uint32_t n_edges, const uint32_t nObs
+               ,const std::vector< std::vector<T>> observation, con
