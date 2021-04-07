@@ -1059,4 +1059,65 @@ void set_speed(CP::CutPursuit<T> * cp, const T speed, const T weight_decay, cons
         {
             std::cout << "PARAMETERIZATION = SPECIAL SUPERPOINTGRAPH" << std::endl;
         }
-        cp->parameter.flow_s
+        cp->parameter.flow_steps  = 3;
+		cp->parameter.weight_decay = weight_decay;
+        cp->parameter.kmeans_ite  = 5;
+        cp->parameter.kmeans_resampling = 10;
+        cp->parameter.max_ite_main = 15;
+        cp->parameter.backward_step = true;
+        cp->parameter.stopping_ratio = 0.05;
+    }
+    if (speed == 3)
+    {
+         if (verbose > 0)
+        {
+            std::cout << "PARAMETERIZATION = LUDICROUS SPEED" << std::endl;
+        }
+        cp->parameter.flow_steps  = 1;
+        cp->parameter.weight_decay = weight_decay;
+        cp->parameter.kmeans_ite  = 3;
+        cp->parameter.kmeans_resampling = 1;
+        cp->parameter.max_ite_main = 5;
+        cp->parameter.backward_step = false;
+        cp->parameter.stopping_ratio = 0.1;
+    }
+    if (speed == 2)
+    {
+         if (verbose > 0)
+        {
+            std::cout << "PARAMETERIZATION = FAST" << std::endl;
+        }
+        cp->parameter.flow_steps  = 2;
+        cp->parameter.weight_decay = weight_decay;
+        cp->parameter.kmeans_ite  = 5;
+        cp->parameter.kmeans_resampling = 2;
+        cp->parameter.max_ite_main = 5;
+        cp->parameter.backward_step = true;
+        cp->parameter.stopping_ratio = 0.05;
+    }
+    else if (speed == 0)
+    {
+         if (verbose > 0)
+        {
+            std::cout << "PARAMETERIZATION = SLOW" << std::endl;
+        }
+        cp->parameter.flow_steps  = 4;
+        cp->parameter.weight_decay = weight_decay;
+        cp->parameter.kmeans_ite  = 8;
+        cp->parameter.kmeans_resampling = 5;
+        cp->parameter.max_ite_main = 20;
+        cp->parameter.backward_step = true;
+        cp->parameter.stopping_ratio = 0.001;
+    }
+    else if (speed == 1)
+    {
+        if (verbose > 0)
+        {
+            std::cout << "PARAMETERIZATION = STANDARD" << std::endl;
+        }
+        cp->parameter.flow_steps  = 3;
+        cp->parameter.weight_decay = weight_decay;
+        cp->parameter.kmeans_ite  = 5;
+        cp->parameter.kmeans_resampling = 2;
+        cp->parameter.max_ite_main = 10;
+        cp->parameter
