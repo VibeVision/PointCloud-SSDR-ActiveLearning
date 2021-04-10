@@ -1120,4 +1120,8 @@ void set_speed(CP::CutPursuit<T> * cp, const T speed, const T weight_decay, cons
         cp->parameter.kmeans_ite  = 5;
         cp->parameter.kmeans_resampling = 2;
         cp->parameter.max_ite_main = 10;
-        cp->parameter
+        cp->parameter.backward_step = true;
+        cp->parameter.stopping_ratio = 0.01;
+    }
+}
+}
