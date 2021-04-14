@@ -123,3 +123,48 @@ class CutPursuit
                     }
                 }
                 std::cout << "Timer  " << ts.toc() << std::endl;
+            }
+            //----stopping checks-----
+            if (saturation == (double) this->nVertex)
+            {   //all components are saturated
+                if (this->parameter.verbose > 1)
+                {
+                    std::cout << "All components are saturated" << std::endl;
+                }
+                break;
+            }
+            if ((old_energy - energy.first - energy.second) / (old_energy)
+               < this->parameter.stopping_ratio)
+            {   //relative energy progress stopping criterion
+                if (this->parameter.verbose > 1)
+                {
+                    std::cout << "Stopping criterion reached" << std::endl;
+                }
+                break;
+            }
+            if (ite_main>=this->parameter.max_ite_main)
+            {   //max number of iteration
+                if (this->parameter.verbose > 1)
+                {
+                    std::cout << "Max number of iteration reached" << std::endl;
+                }
+                break;
+            }
+            old_energy = energy.first + energy.second;
+        }
+        if (this->parameter.cutoff > 0)
+        {
+            this->cutoff();
+        }
+        return std::pair<std::vector<T>, std::vector<T>>(energy_out, time_out);
+    }
+    //=============================================================================================
+    //=========== VIRTUAL METHODS DEPENDING ON THE CHOICE OF FIDELITY FUNCTION =====================
+    //=============================================================================================
+    //
+    //=============================================================================================
+    //=============================        SPLIT        ===========================================
+    //=============================================================================================
+    virtual uint32_t split()
+    {
+        //co
