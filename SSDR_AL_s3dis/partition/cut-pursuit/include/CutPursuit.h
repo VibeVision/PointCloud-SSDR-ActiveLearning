@@ -81,4 +81,45 @@ class CutPursuit
              << this->dim << '\n';
         }
         T energy_zero = this->compute_energy().first; //energy with 1 component
-        T old_energy = e
+        T old_energy = energy_zero; //energy at the previous iteration
+        //vector with time and energy, useful for benchmarking
+        std::vector<T> energy_out(this->parameter.max_ite_main ),time_out(this->parameter.max_ite_main);
+        TimeStack ts; ts.tic();
+        //the main loop
+        for (uint32_t ite_main = 1; ite_main <= this->parameter.max_ite_main; ite_main++)
+        {
+            //--------those two lines are the whole iteration-------------------------
+            uint32_t saturation = this->split(); //compute optimal binary partition
+            this->reduce(); //compute the new reduced graph
+            //-------end of the iteration - rest is stopping check and display------
+            std::pair<T,T> energy = this->compute_energy();
+            energy_out.push_back((energy.first + energy.second));
+            time_out.push_back(ts.tocDouble());
+            if (this->parameter.verbose > 1)
+            {
+                printf("Iteration %3i - %4i components - ", ite_main, (int)this->components.size());
+                printf("Saturation %5.1f %% - ",100*saturation / (double) this->nVertex);
+                switch (this->parameter.fidelity)
+                {
+                    case L2:
+                    {
+                        printf("Quadratic Energy %4.3f %% - ", 100 * (energy.first + energy.second) / energy_zero);
+                        break;
+                    }
+                    case linear:
+                    {
+                        printf("Linear Energy %10.1f - ", energy.first + energy.second);
+                        break;
+                    }
+                    case KL:
+                    {
+                        printf("KL Energy %4.3f %% - ", 100 * (energy.first + energy.second) / energy_zero);
+                        break;
+                    }
+       case SPG:
+                    {
+                        printf("Quadratic Energy %4.3f %% - ", 100 * (energy.first + energy.second) / energy_zero);
+                        break;
+                    }
+                }
+                std::cout << "Timer  " << ts.toc() << std::endl;
