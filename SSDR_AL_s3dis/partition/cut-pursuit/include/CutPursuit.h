@@ -230,4 +230,43 @@ class CutPursuit
         {
             // note that source and edge will have many nieghbors, and hence boost::edge should never be called to get
             // the in_edge. use the out_edge and then reverse_Edge
-            addDoubledge<T>(this->main_graph, this->source, boost::vertex(ind_ver, this->main_graph),
+            addDoubledge<T>(this->main_graph, this->source, boost::vertex(ind_ver, this->main_graph), 0.,
+                         eIndex, edge_attribute_map , false);
+            eIndex +=2;
+            addDoubledge<T>(this->main_graph, boost::vertex(ind_ver, this->main_graph), this->sink, 0.,
+                         eIndex, edge_attribute_map, false);
+            eIndex +=2;
+            ++ite_ver;
+        }
+
+    }
+    //=============================================================================================
+    //================================  COMPUTE_REDUCE_VALUE  ====================================
+    //=============================================================================================
+    void compute_reduced_value()
+    {
+        for (uint32_t ind_com = 0;  ind_com < this->components.size(); ++ind_com)
+        {   //compute the reduced value of each component
+            compute_value(ind_com);
+        }
+    }
+    //=============================================================================================
+    //=============================   ACTIVATE_EDGES     ==========================================
+    //=============================================================================================
+    uint32_t activate_edges(bool allows_saturation = true)
+    {   //this function analyzes the optimal binary partition to detect:
+        //- saturated components (i.e. uncuttable)
+        //- new activated edges
+        VertexAttributeMap<T> vertex_attribute_map
+            = boost::get(boost::vertex_bundle, this->main_graph);
+        EdgeAttributeMap<T> edge_attribute_map
+            = boost::get(boost::edge_bundle, this->main_graph);
+        //saturation is the proportion of nodes in saturated components
+        uint32_t saturation = 0;
+        uint32_t nb_comp = this->components.size();
+        //---- first check if the component are saturated-------------------------
+        //#pragma omp parallel for if (this->parameter.parallel) schedule(dynamic)
+        for (uint32_t ind_com = 0; ind_com < nb_comp; ind_com++)
+        {
+            if (this->saturated_components[ind_com])
+     
