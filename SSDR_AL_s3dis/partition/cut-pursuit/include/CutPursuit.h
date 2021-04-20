@@ -199,4 +199,35 @@ class CutPursuit
     //========================== END OF VIRTUAL METHODS ===========================================
     //=============================================================================================
     //
-    //===============
+    //=============================================================================================
+    //=============================     INITIALIZE      ===========================================
+    //=============================================================================================
+    void initialize()
+    {
+        //build the reduced graph with one component, fill the first vector of components
+        //and add the sink and source nodes
+        VertexIterator<T> ite_ver, ite_ver_end;
+        EdgeAttributeMap<T> edge_attribute_map
+            = boost::get(boost::edge_bundle, this->main_graph);
+        this->components[0]  = std::vector<VertexDescriptor<T>> (0);//(this->nVertex);
+        this->root_vertex[0] = *boost::vertices(this->main_graph).first;
+        this->nVertex = boost::num_vertices(this->main_graph);
+        this->nEdge   = boost::num_edges(this->main_graph);
+        //--------compute the first reduced graph----------------------------------------------------------
+        for (boost::tie(ite_ver, ite_ver_end) = boost::vertices(this->main_graph);
+             ite_ver != ite_ver_end; ++ite_ver)
+        {
+            this->components[0].push_back(*ite_ver);
+        }
+        this->lastIterator = ite_ver;
+        this->compute_value(0);
+        //--------build the link to source and sink--------------------------------------------------------
+        this->source = boost::add_vertex(this->main_graph);
+        this->sink   = boost::add_vertex(this->main_graph);
+        uint32_t eIndex = boost::num_edges(this->main_graph);
+        ite_ver = boost::vertices(this->main_graph).first;
+        for (uint32_t ind_ver = 0;  ind_ver < this->nVertex ; ind_ver++)
+        {
+            // note that source and edge will have many nieghbors, and hence boost::edge should never be called to get
+            // the in_edge. use the out_edge and then reverse_Edge
+            addDoubledge<T>(this->main_graph, this->source, boost::vertex(ind_ver, this->main_graph),
