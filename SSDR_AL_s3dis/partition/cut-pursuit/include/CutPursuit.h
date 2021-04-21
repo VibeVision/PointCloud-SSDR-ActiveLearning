@@ -269,4 +269,47 @@ class CutPursuit
         for (uint32_t ind_com = 0; ind_com < nb_comp; ind_com++)
         {
             if (this->saturated_components[ind_com])
-     
+            {   //ind_com is saturated, we increement saturation by ind_com size
+                saturation += this->components[ind_com].size();
+                continue;
+            }
+            std::vector<T> totalWeight(2,0);
+            for (uint32_t ind_ver = 0;  ind_ver < this->components[ind_com].size(); ind_ver++)
+            {
+                bool isSink
+                        = (vertex_attribute_map(this->components[ind_com][ind_ver]).color
+                        ==  vertex_attribute_map(this->sink).color);
+                if (isSink)
+                {
+                    totalWeight[0] += vertex_attribute_map(this->components[ind_com][ind_ver]).weight;
+                }
+                else
+                {
+                   totalWeight[1] += vertex_attribute_map(this->components[ind_com][ind_ver]).weight;
+                }
+            }
+            if (allows_saturation && ((totalWeight[0] == 0)||(totalWeight[1] == 0)))
+            {
+                //the component is saturated
+                this->saturateComponent(ind_com);
+                saturation += this->components[ind_com].size();
+            }
+        }
+        //----check which edges have been activated----
+        EdgeIterator<T> ite_edg, ite_edg_end;
+        uint32_t color_v1, color_v2, color_combination;
+        for (boost::tie(ite_edg, ite_edg_end) = boost::edges(this->main_graph);
+             ite_edg != ite_edg_end; ++ite_edg)
+        {
+            if (!edge_attribute_map(*ite_edg).realEdge )
+            {
+                continue;
+            }
+            color_v1 = vertex_attribute_map(boost::source(*ite_edg, this->main_graph)).color;
+            color_v2 = vertex_attribute_map(boost::target(*ite_edg, this->main_graph)).color;
+            //color_source = 0, color_sink = 4, uncolored = 1
+            //we want an edge when a an interface source/sink
+            //this corresponds to a sum of 4
+            //for the case of uncolored nodes we arbitrarily chose source-uncolored
+            color_combination = color_v1 + color_v2;
+           
