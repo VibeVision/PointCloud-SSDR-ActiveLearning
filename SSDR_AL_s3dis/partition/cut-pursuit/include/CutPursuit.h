@@ -312,4 +312,42 @@ class CutPursuit
             //this corresponds to a sum of 4
             //for the case of uncolored nodes we arbitrarily chose source-uncolored
             color_combination = color_v1 + color_v2;
-           
+            if ((color_combination == 0)||(color_combination == 2)||(color_combination == 2)
+              ||(color_combination == 8))
+            {   //edge between two vertices of the same color
+                continue;
+            }
+            //the edge is active!
+            edge_attribute_map(*ite_edg).isActive = true;
+            edge_attribute_map(*ite_edg).capacity = 0;
+            vertex_attribute_map(boost::source(*ite_edg, this->main_graph)).isBorder = true;
+            vertex_attribute_map(boost::target(*ite_edg, this->main_graph)).isBorder = true;
+        }
+        return saturation;
+    }
+
+    //=============================================================================================
+    //=============================        REDUCE       ===========================================
+    //=============================================================================================
+    void reduce()
+    {   //compute the reduced graph, and if need be performed a backward check
+        this->compute_connected_components();
+        if (this->parameter.backward_step)
+        {   //compute the structure of the reduced graph        
+            this->compute_reduced_graph();
+            //check for beneficial merges
+            this->merge(false);
+        }
+        else
+        {   //compute only the value associated to each connected components
+            this->compute_reduced_value();
+        }
+    }
+    //=============================================================================================
+    //==============================  compute_connected_components=========================================
+    //=============================================================================================
+    void compute_connected_components()
+    {  //this function compute the connected components of the graph with active edges removed
+        //the boolean vector indicating wether or not the edges and vertices have been seen already
+        //the root is the first vertex of a component
+        //this function is written such that the new components are
