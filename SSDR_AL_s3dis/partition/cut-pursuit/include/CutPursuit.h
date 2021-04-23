@@ -350,4 +350,40 @@ class CutPursuit
     {  //this function compute the connected components of the graph with active edges removed
         //the boolean vector indicating wether or not the edges and vertices have been seen already
         //the root is the first vertex of a component
-        //this function is written such that the new components are
+        //this function is written such that the new components are appended at the end of components
+        //this allows not to recompute saturated component
+        VertexAttributeMap<T> vertex_attribute_map
+            = boost::get(boost::vertex_bundle, this->main_graph);
+        VertexIndexMap<T> vertex_index_map =get(boost::vertex_index, this->main_graph);
+        //indicate which edges and nodes have been seen already by the dpsearch
+        std::vector<bool> edges_seen (this->nEdge, false);
+        std::vector<bool> vertices_seen (this->nVertex+2, false);
+        vertices_seen[vertex_index_map(this->source)] = true;
+        vertices_seen[vertex_index_map(this->sink)]   = true;
+        //-------- start with the known roots------------------------------------------------------
+        //#pragma omp parallel for if (this->parameter.parallel) schedule(dynamic)
+        for (uint32_t ind_com = 0; ind_com < this->root_vertex.size(); ind_com++)
+        {
+            VertexDescriptor<T> root = this->root_vertex[ind_com]; //the first vertex of the component
+            if (this->saturated_components[ind_com])
+            {   //this component is saturated, we don't need to recompute it
+                for (uint32_t ind_ver = 0; ind_ver < this->components[ind_com].size(); ++ind_ver)
+                {
+                    vertices_seen[vertex_index_map(this->components[ind_com][ind_ver])] = true;
+                }
+            }
+            else
+            {   //compute the new content of this component
+                this->components.at(ind_com) = connected_comp_from_root(root, this->components.at(ind_com).size()
+                                          , vertices_seen , edges_seen);
+             }
+        }
+        //----now look for components that did not already exists----
+        VertexIterator<T> ite_ver;
+        for (ite_ver = boost::vertices(this->main_graph).first;
+             ite_ver != this->lastIterator; ++ite_ver)
+        {
+            if (vertices_seen[vertex_index_map(*ite_ver)])
+            {
+                 continue;
+            } //this vertex is not currently in a conn
