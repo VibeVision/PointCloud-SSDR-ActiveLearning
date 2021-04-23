@@ -386,4 +386,35 @@ class CutPursuit
             if (vertices_seen[vertex_index_map(*ite_ver)])
             {
                  continue;
-            } //this vertex is not currently in a conn
+            } //this vertex is not currently in a connected component
+            VertexDescriptor<T> root = *ite_ver; //we define it as the root of a new component
+            uint32_t current_component_size =
+                    this->components[vertex_attribute_map(root).in_component].size();
+            this->components.push_back(
+                    connected_comp_from_root(root, current_component_size
+                  , vertices_seen, edges_seen));
+            this->root_vertex.push_back(root);
+            this->saturated_components.push_back(false);
+        }
+        this->components.shrink_to_fit();
+    }
+    //=============================================================================================
+    //==============================  CONNECTED_COMP_FROM_ROOT=========================================
+    //=============================================================================================
+    inline std::vector<VertexDescriptor<T>> connected_comp_from_root(const VertexDescriptor<T> & root
+                , const uint32_t & size_comp, std::vector<bool> & vertices_seen , std::vector<bool> & edges_seen)
+    {
+        //this function compute the connected component of the graph with active edges removed
+        // associated with the root ROOT by performing a depth search first
+        EdgeAttributeMap<T> edge_attribute_map
+             = boost::get(boost::edge_bundle, this->main_graph);
+        VertexIndexMap<T> vertex_index_map = get(boost::vertex_index, this->main_graph);
+        EdgeIndexMap<T>   edge_index_map = get(&EdgeAttribute<T>::index, this->main_graph);
+        std::vector<VertexDescriptor<T>> vertices_added; //the vertices in the current connected component
+        // vertices_added contains the vertices that have been added to the current coomponent
+        vertices_added.reserve(size_comp);
+        //heap_explore contains the vertices to be added to the current component
+        std::vector<VertexDescriptor<T>> vertices_to_add;
+        vertices_to_add.reserve(size_comp);
+        VertexDescriptor<T> vertex_current; //the node being consideed
+        EdgeDescriptor      edge_cur
