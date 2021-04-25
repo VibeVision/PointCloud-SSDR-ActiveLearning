@@ -417,4 +417,37 @@ class CutPursuit
         std::vector<VertexDescriptor<T>> vertices_to_add;
         vertices_to_add.reserve(size_comp);
         VertexDescriptor<T> vertex_current; //the node being consideed
-        EdgeDescriptor      edge_cur
+        EdgeDescriptor      edge_current, edge_reverse; //the edge being considered
+        //fill the heap with the root node
+        vertices_to_add.push_back(root);
+        while (vertices_to_add.size()>0)
+        {   //as long as there are vertices left to add
+            vertex_current = vertices_to_add.back(); //the current node is the last node to add
+            vertices_to_add.pop_back(); //remove the current node from the vertices to add
+            if (vertices_seen[vertex_index_map(vertex_current)])
+            {   //this vertex has already been treated
+                continue;
+            }
+            vertices_added.push_back(vertex_current); //we add the current node
+            vertices_seen[vertex_index_map(vertex_current)] = true ; //and flag it as seen
+            //----we now explore the neighbors of current_node
+            typename boost::graph_traits<Graph<T>>::out_edge_iterator ite_edg, ite_edg_end;
+            for (boost::tie(ite_edg,ite_edg_end) = boost::out_edges(vertex_current, this->main_graph);
+                ite_edg !=  ite_edg_end; ++ite_edg)
+                {   //explore edges leaving current_node
+                    edge_current = *ite_edg;
+                    if (edge_attribute_map(*ite_edg).isActive || (edges_seen[edge_index_map(edge_current)]))
+                    {   //edge is either active or treated, we skip it
+                        continue;
+                    }
+                    //the target of this edge is a node to add
+                    edge_reverse = edge_attribute_map(edge_current).edge_reverse;
+                    edges_seen[edge_index_map(edge_current)] = true;
+                    edges_seen[edge_index_map(edge_reverse)] = true;
+                    vertices_to_add.push_back(boost::target(edge_current, this->main_graph));
+               }
+            }
+            vertices_added.shrink_to_fit();
+            return vertices_added;
+    }
+    //======================================================================================
