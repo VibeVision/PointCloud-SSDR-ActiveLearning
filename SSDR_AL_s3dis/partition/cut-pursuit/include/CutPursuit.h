@@ -484,4 +484,36 @@ class CutPursuit
         EdgeAttributeMap<T> border_edge_attribute_map = boost::get(boost::edge_bundle, this->reduced_graph);
         this->borders.clear();
         EdgeDescriptor edge_current, border_edge_current;
-        uint32_t ind_border_edge = 0, comp1, comp2, component_source, component_
+        uint32_t ind_border_edge = 0, comp1, comp2, component_source, component_target;
+        VertexDescriptor<T> source_component, target_component;
+        bool reducedEdgeExists;
+        typename boost::graph_traits<Graph<T>>::edge_iterator ite_edg, ite_edg_end;
+        for (boost::tie(ite_edg,ite_edg_end) = boost::edges(this->main_graph); ite_edg !=  ite_edg_end; ++ite_edg)
+        {
+            if (!edge_attribute_map(*ite_edg).realEdge)
+            {   //edges linking the source or edge node do not take part
+                continue;
+            }
+            edge_current = *ite_edg;
+            //compute the connected components of the source and target of current_edge
+            comp1       = vertex_attribute_map(boost::source(edge_current, this->main_graph)).in_component;
+            comp2       = vertex_attribute_map(boost::target(edge_current, this->main_graph)).in_component;
+            if (comp1==comp2)
+            {   //this edge links two nodes in the same connected component
+                continue;
+            }
+            //by convention we note component_source the smallest index and
+            //component_target the largest
+            component_source  = std::min(comp1,comp2);
+            component_target  = std::max(comp1,comp2);
+            //retrieve the corresponding vertex in the reduced graph
+            source_component = boost::vertex(component_source, this->reduced_graph);
+            target_component = boost::vertex(component_target, this->reduced_graph);
+            //try to add the border-edge linking those components in the reduced graph
+            boost::tie(border_edge_current, reducedEdgeExists)
+                    = boost::edge(source_component, target_component, this->reduced_graph);
+            if (!reducedEdgeExists)                
+            {   //this border-edge did not already existed in the reduced graph
+                //border_edge_current = boost::add_edge(source_component, target_component, this->reduced_graph).first;
+                border_edge_current = boost::add_edge(source_component, target_component, this->reduced_graph).first;
+                border_edge_attribute_map(border_edge_cur
