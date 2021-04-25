@@ -516,4 +516,36 @@ class CutPursuit
             {   //this border-edge did not already existed in the reduced graph
                 //border_edge_current = boost::add_edge(source_component, target_component, this->reduced_graph).first;
                 border_edge_current = boost::add_edge(source_component, target_component, this->reduced_graph).first;
-                border_edge_attribute_map(border_edge_cur
+                border_edge_attribute_map(border_edge_current).index  = ind_border_edge;
+                border_edge_attribute_map(border_edge_current).weight = 0;
+                ind_border_edge++;
+                //create a new entry for the borders list containing this border
+                this->borders.push_back(std::vector<EdgeDescriptor>(0));
+            }
+            //add the weight of the current edge to the weight of the border-edge
+            border_edge_attribute_map(border_edge_current).weight += 0.5*edge_attribute_map(edge_current).weight;
+            this->borders[border_edge_attribute_map(border_edge_current).index].push_back(edge_current);
+        }
+    }
+    //=============================================================================================
+    //================================          MERGE          ====================================
+    //=============================================================================================
+    uint32_t merge(bool is_cutoff)
+    {
+        // TODO: right now we only do one loop through the heap of potential mergeing, and only
+        //authorize one mergeing per component. We could update the gain and merge until it is no longer
+        //beneficial
+        //check wether the energy can be decreased by removing edges from the reduced graph     
+        //----load graph structure---
+        VertexAttributeMap<T> vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->main_graph);
+        VertexAttributeMap<T> component_attribute_map
+                = boost::get(boost::vertex_bundle, this->reduced_graph);
+        EdgeAttributeMap<T> border_edge_attribute_map
+                = boost::get(boost::edge_bundle, this->reduced_graph);
+        EdgeAttributeMap<T> edge_attribute_map
+                = boost::get(boost::edge_bundle, this->main_graph);
+        VertexIndexMap<T> component_index_map = boost::get(boost::vertex_index, this->reduced_graph);
+        //-----------------------------------
+        EdgeDescriptor border_edge_current;
+        typename boost::graph_traits<Graph<T>>::edge_iterator ite_border, ite_border_
