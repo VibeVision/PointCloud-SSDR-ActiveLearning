@@ -450,4 +450,38 @@ class CutPursuit
             vertices_added.shrink_to_fit();
             return vertices_added;
     }
-    //======================================================================================
+    //=============================================================================================
+    //================================  COMPUTE_REDUCE_GRAPH   ====================================
+    //=============================================================================================
+    void compute_reduced_graph()
+    {   //compute the adjacency structure between components as well as weight and value of each component
+        //this is stored in the reduced graph structure
+        EdgeAttributeMap<T> edge_attribute_map
+            = boost::get(boost::edge_bundle, this->main_graph);
+        VertexAttributeMap<T> vertex_attribute_map
+            = boost::get(boost::vertex_bundle, this->main_graph);
+        this->reduced_graph = Graph<T>(this->components.size());
+        VertexAttributeMap<T> component_attribute_map = boost::get(boost::vertex_bundle, this->reduced_graph);
+        //----fill the value sof the reduced graph----
+        #ifdef OPENMP
+        #pragma omp parallel for schedule(dynamic) 
+        #endif
+        for (uint32_t ind_com = 0;  ind_com < this->components.size(); ind_com++)
+        {
+            std::pair<std::vector<T>, T> component_values_and_weight = this->compute_value(ind_com);
+            //----fill the value and weight field of the reduced graph-----------------------------
+            VertexDescriptor<T> reduced_vertex = boost::vertex(ind_com, this->reduced_graph);
+            component_attribute_map[reduced_vertex] = VertexAttribute<T>(this->dim);
+            component_attribute_map(reduced_vertex).weight
+                    = component_values_and_weight.second;
+            for(uint32_t i_dim=0; i_dim<this->dim; i_dim++)
+            {
+                component_attribute_map(reduced_vertex).value[i_dim]
+                        = component_values_and_weight.first[i_dim];
+            }
+        }
+        //------compute the edges of the reduced graph
+        EdgeAttributeMap<T> border_edge_attribute_map = boost::get(boost::edge_bundle, this->reduced_graph);
+        this->borders.clear();
+        EdgeDescriptor edge_current, border_edge_current;
+        uint32_t ind_border_edge = 0, comp1, comp2, component_source, component_
