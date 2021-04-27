@@ -575,4 +575,39 @@ class CutPursuit
             ind_target_component = component_index_map(target_component);
             //----now compute the gain of mergeing those two components-----
             // compute the fidelity lost by mergeing the two connected components
-            std::pair<std::vector<T>, T> merge_gain = compute_mer
+            std::pair<std::vector<T>, T> merge_gain = compute_merge_gain(source_component, target_component);
+            // the second part is due to the removing of the border
+            gain = merge_gain.second
+                 + border_edge_attribute_map(border_edge_current).weight * this->parameter.reg_strenth;
+            //mergeing_information store the indexes of the components as well as the edge index and the gain
+            //in a structure ordered by the gain
+            ComponentsFusion<T> mergeing_information(ind_source_component, ind_target_component, border_edge_currentIndex, gain);
+            mergeing_information.merged_value = merge_gain.first;
+            if (is_cutoff || gain>0)
+            {   //it is beneficial to merge those two components
+                //we add them to the merge_queue
+                merge_queue.push(mergeing_information);
+                //gain_current.at(border_edge_currentIndex) = gain;
+            }
+        }
+        uint32_t n_merged = 0;
+        //----go through the priority queue of merges and perform them as long as it is beneficial---
+        //is_merged indicate which components no longer exists because they have been merged with a neighboring component
+        std::vector<bool> is_merged(this->components.size(), false);
+        //to_destroy indicates the components that are needed to be removed
+        std::vector<bool> to_destroy(this->components.size(), false);
+        while(merge_queue.size()>0)
+        {   //loop through the potential mergeing and accept the ones that decrease the energy
+            ComponentsFusion<T> mergeing_information = merge_queue.top();
+            if (!is_cutoff && mergeing_information.merge_gain<=0)
+            {   //no more mergeing provide a gain in energy
+                break;
+            }            
+            merge_queue.pop();
+            if (is_merged.at(mergeing_information.comp1) || (is_merged.at(mergeing_information.comp2)))
+            {
+                //at least one of the components have already been merged
+                continue;
+            }
+            n_merged++;
+            //---proceed with the fusion of comp1 
