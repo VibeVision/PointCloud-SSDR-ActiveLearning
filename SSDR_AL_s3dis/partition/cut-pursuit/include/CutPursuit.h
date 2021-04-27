@@ -610,4 +610,37 @@ class CutPursuit
                 continue;
             }
             n_merged++;
-            //---proceed with the fusion of comp1 
+            //---proceed with the fusion of comp1 and comp2----
+            //add the vertices of comp2 to comp1
+            this->components[mergeing_information.comp1].insert(this->components[mergeing_information.comp1].end()
+                ,components[mergeing_information.comp2].begin(), this->components[mergeing_information.comp2].end());
+            //if comp1 was saturated it might not be anymore
+            this->saturated_components[mergeing_information.comp1] = false;
+            //the new weight is the sum of both weights
+            component_attribute_map(mergeing_information.comp1).weight
+                           += component_attribute_map(mergeing_information.comp2).weight;
+            //the new value is already computed in mergeing_information
+            component_attribute_map(mergeing_information.comp1).value  = mergeing_information.merged_value;
+            //we deactivate the border between comp1 and comp2
+            for (ite_border_edge = this->borders.at(mergeing_information.border_index).begin();
+                ite_border_edge != this->borders.at(mergeing_information.border_index).end() ; ++ite_border_edge)
+            {
+                 edge_attribute_map(*ite_border_edge).isActive = false;
+            }
+            is_merged.at(mergeing_information.comp1)  = true;
+            is_merged.at(mergeing_information.comp2)  = true;
+            to_destroy.at(mergeing_information.comp2) = true;
+        }
+        //we now rebuild the vectors components, rootComponents and saturated_components
+        std::vector<std::vector<VertexDescriptor<T>>> new_components;
+        std::vector<VertexDescriptor<T>> new_root_vertex;
+        std::vector<bool> new_saturated_components;
+        uint32_t ind_new_component = 0;
+        for (uint32_t ind_com = 0; ind_com < this->components.size(); ind_com++)
+        {
+            if (to_destroy.at(ind_com))
+            {   //this component has been removed
+                continue;
+            }//this components is kept
+            new_components.push_back(this->components.at(ind_com));
+            new_root_vertex.push_back(this->root_vertex.a
