@@ -548,4 +548,31 @@ class CutPursuit
         VertexIndexMap<T> component_index_map = boost::get(boost::vertex_index, this->reduced_graph);
         //-----------------------------------
         EdgeDescriptor border_edge_current;
-        typename boost::graph_traits<Graph<T>>::edge_iterator ite_border, ite_border_
+        typename boost::graph_traits<Graph<T>>::edge_iterator ite_border, ite_border_end;
+        typename std::vector<EdgeDescriptor>::iterator ite_border_edge;
+        VertexDescriptor<T> source_component, target_component;
+        uint32_t ind_source_component, ind_target_component, border_edge_currentIndex;
+        //gain_current is the vector of gains associated with each mergeing move
+        //std::vector<T> gain_current(boost::num_edges(this->reduced_graph));
+        //we store in merge_queue the potential mergeing with a priority on the potential gain
+        std::priority_queue<ComponentsFusion<T>, std::vector<ComponentsFusion<T>>, lessComponentsFusion<T>> merge_queue;
+        T gain; // the gain obtained by removing the border corresponding to the edge in the reduced graph
+        for (boost::tie(ite_border,ite_border_end) = boost::edges(this->reduced_graph); ite_border !=  ite_border_end; ++ite_border)
+        {
+            //a first pass go through all the edges in the reduced graph and compute the gain obtained by
+            //mergeing the corresponding vertices
+            border_edge_current      = *ite_border;
+            border_edge_currentIndex = border_edge_attribute_map(border_edge_current).index;
+            //retrieve the two components corresponding to this border
+            source_component = boost::source(border_edge_current, this->reduced_graph);
+            target_component = boost::target(border_edge_current, this->reduced_graph);
+            if (is_cutoff && component_attribute_map(source_component).weight >= this->parameter.cutoff
+              &&component_attribute_map(target_component).weight >= this->parameter.cutoff)
+            {
+                continue;
+            }
+            ind_source_component = component_index_map(source_component);
+            ind_target_component = component_index_map(target_component);
+            //----now compute the gain of mergeing those two components-----
+            // compute the fidelity lost by mergeing the two connected components
+            std::pair<std::vector<T>, T> merge_gain = compute_mer
