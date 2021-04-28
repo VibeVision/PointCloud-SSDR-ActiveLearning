@@ -643,4 +643,48 @@ class CutPursuit
                 continue;
             }//this components is kept
             new_components.push_back(this->components.at(ind_com));
-            new_root_vertex.push_back(this->root_vertex.a
+            new_root_vertex.push_back(this->root_vertex.at(ind_com));
+            new_saturated_components.push_back(saturated_components.at(ind_com));
+            //if (is_merged.at(ind_com))
+            //{   //we need to update the value of the vertex in this component
+                for (uint32_t ind_ver = 0; ind_ver < this->components[ind_com].size(); ++ind_ver)
+                {
+                    vertex_attribute_map(this->components[ind_com][ind_ver]).value
+                        = component_attribute_map(boost::vertex(ind_com, this->reduced_graph)).value;
+                    vertex_attribute_map(this->components[ind_com][ind_ver]).in_component
+                        = ind_new_component;//ind_com;
+                }
+            //}
+            ind_new_component++;
+        }
+        this->components           = new_components;
+        this->root_vertex          = new_root_vertex;
+        this->saturated_components = new_saturated_components;
+        return n_merged;
+    }
+    //=============================================================================================
+    //================================          CUTOFF          ====================================
+    //=============================================================================================
+    void cutoff()
+    {
+        int i = 0;
+        uint32_t n_merged;
+        while (true)
+        {
+            //this->compute_connected_components();
+            this->compute_reduced_graph();
+            n_merged = merge(true);
+            i++;
+            if (n_merged==0 || i>50)
+            {
+                break;
+            }
+        }
+    }
+//    //=============================================================================================
+//    //================================          CUTOFF          ====================================
+//    //=============================================================================================
+//    void cutoff()
+//    {
+//        // Loop through all components and merge the one smaller than the cutoff.
+//        // It merges co
