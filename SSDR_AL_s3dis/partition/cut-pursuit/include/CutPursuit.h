@@ -687,4 +687,32 @@ class CutPursuit
 //    void cutoff()
 //    {
 //        // Loop through all components and merge the one smaller than the cutoff.
-//        // It merges co
+//        // It merges components which increase he energy the least
+//        //----load graph structure---
+//        VertexAttributeMap<T> vertex_attribute_map
+//                = boost::get(boost::vertex_bundle, this->main_graph);
+//        VertexAttributeMap<T> reduced_vertex_attribute_map
+//                = boost::get(boost::vertex_bundle, this->reduced_graph);
+//        EdgeAttributeMap<T> reduced_edge_attribute_map
+//                = boost::get(boost::edge_bundle, this->reduced_graph);
+//        EdgeAttributeMap<T> edge_attribute_map
+//                = boost::get(boost::edge_bundle, this->main_graph);
+//        VertexIndexMap<T> reduced_vertex_index_map = boost::get(boost::vertex_index, this->reduced_graph);
+//        EdgeIndexMap<T> reduced_edge_index_map = get(&EdgeAttribute<T>::index, this->reduced_graph);
+//        //-----------------------------------
+//        typename boost::graph_traits<Graph<T>>::vertex_iterator ite_comp, ite_comp_end;
+//        typename boost::graph_traits<Graph<T>>::out_edge_iterator ite_edg_out, ite_edg_out_end;
+//        typename boost::graph_traits<Graph<T>>::in_edge_iterator ite_edg_in, ite_edg_in_end;
+//        typename std::vector<EdgeDescriptor>::iterator ite_border_edge;
+//        VertexDescriptor<T> current_vertex, neighbor_vertex;
+//        //gain_current is the vector of gains associated with each mergeing move
+//        //we store in merge_queue the potential mergeing with a priority on the potential gain
+//        T gain; // the gain obtained by removing the border corresponding to the edge in the reduced graph
+//        std::vector<bool> to_destroy(this->components.size(), false); //components merged to be removed
+//        while (true)
+//        {
+//            this->compute_connected_components();
+//            this->compute_reduced_graph();
+//            bool has_merged = false;
+//            std::cout << "CUTTING OFF : " << this->components.size() << "COMPONENTS " << std::endl;
+//            for (boost::tie(ite_comp,ite_comp_end) = boost::vert
