@@ -743,4 +743,31 @@ class CutPursuit
 //                for (boost::tie(ite_edg_in,ite_edg_in_end) = boost::in_edges(current_vertex, this->reduced_graph);
 //                    ite_edg_in !=  ite_edg_in_end; ++ite_edg_in)
 //                {   //explore all neighbors
-//                     neighbor_vertex = boost::source(*ite_edg_
+//                     neighbor_vertex = boost::source(*ite_edg_in, this->reduced_graph);
+//                     std::pair<std::vector<T>, T> merge_gain = compute_merge_gain(current_vertex, neighbor_vertex);
+//                     gain = merge_gain.second
+//                          + reduced_edge_attribute_map(*ite_edg_in).weight * this->parameter.reg_strenth;
+//                     ComponentsFusion<T> mergeing_information(reduced_vertex_index_map(current_vertex), reduced_vertex_index_map(neighbor_vertex)
+//                                       , reduced_edge_index_map(*ite_edg_in), gain);
+//                     mergeing_information.merged_value = merge_gain.first;
+//                     merge_queue.push(mergeing_information);
+//std::cout << "         NEI IN" <<reduced_vertex_index_map(neighbor_vertex)  << " GAIN"<< gain << std::endl;
+
+//                }
+//                if (merge_queue.empty())
+//                {
+//                    continue;
+//                }
+//                has_merged = true;
+//                //select the most advantegeous neighboring components and merge it.
+//                ComponentsFusion<T> mergeing_information = merge_queue.top();
+//std::cout << "BEST NEIGHBORS = " << mergeing_information.comp1 << " - " << mergeing_information.comp2 << " = " << mergeing_information .merge_gain
+//          << "   Weight " << reduced_vertex_attribute_map(mergeing_information.comp2).weight << std::endl;
+//                this->components[mergeing_information.comp1].insert(this->components[mergeing_information.comp1].end()
+//                    ,components[mergeing_information.comp2].begin(), this->components[mergeing_information.comp2].end());
+//                //the new weight is the sum of both weights
+//                reduced_vertex_attribute_map(mergeing_information.comp1).weight
+//                               += reduced_vertex_attribute_map(mergeing_information.comp2).weight;
+//                //the new value is already computed in mergeing_information
+//                reduced_vertex_attribute_map(mergeing_information.comp1).value  = mergeing_information.merged_value;
+/
