@@ -715,4 +715,32 @@ class CutPursuit
 //            this->compute_reduced_graph();
 //            bool has_merged = false;
 //            std::cout << "CUTTING OFF : " << this->components.size() << "COMPONENTS " << std::endl;
-//            for (boost::tie(ite_comp,ite_comp_end) = boost::vert
+//            for (boost::tie(ite_comp,ite_comp_end) = boost::vertices(this->reduced_graph); ite_comp !=  ite_comp_end; ++ite_comp)
+//            {
+
+//                current_vertex = *ite_comp;
+//                if (reduced_vertex_attribute_map(current_vertex).weight > this->parameter.cutoff
+//                   || to_destroy.at(reduced_vertex_index_map(current_vertex)))
+//                {//component big enough to not be cut or already removed
+//                    continue;
+//                }
+//                std::priority_queue<ComponentsFusion<T>, std::vector<ComponentsFusion<T>>, lessComponentsFusion<T>> merge_queue;
+//std::cout << "COMPONENT " << reduced_vertex_index_map(current_vertex) << " IS OF SIZE"<< reduced_vertex_attribute_map(current_vertex).weight << std::endl;
+//                for (boost::tie(ite_edg_out,ite_edg_out_end) = boost::out_edges(current_vertex, this->reduced_graph);
+//                    ite_edg_out !=  ite_edg_out_end; ++ite_edg_out)
+//                {   //explore all neighbors
+//                     neighbor_vertex = boost::target(*ite_edg_out, this->reduced_graph);
+//                     std::pair<std::vector<T>, T> merge_gain = compute_merge_gain(current_vertex, neighbor_vertex);
+//                     gain = merge_gain.second
+//                          + reduced_edge_attribute_map(*ite_edg_out).weight * this->parameter.reg_strenth;
+//                     ComponentsFusion<T> mergeing_information(reduced_vertex_index_map(current_vertex), reduced_vertex_index_map(neighbor_vertex)
+//                                       , reduced_edge_index_map(*ite_edg_out), gain);
+//                     mergeing_information.merged_value = merge_gain.first;
+//                     merge_queue.push(mergeing_information);
+//std::cout << "         NEI OUT " <<reduced_vertex_index_map(neighbor_vertex)  << " GAIN"<< gain << std::endl;
+
+//                }
+//                for (boost::tie(ite_edg_in,ite_edg_in_end) = boost::in_edges(current_vertex, this->reduced_graph);
+//                    ite_edg_in !=  ite_edg_in_end; ++ite_edg_in)
+//                {   //explore all neighbors
+//                     neighbor_vertex = boost::source(*ite_edg_
