@@ -808,4 +808,26 @@ class CutPursuit
 //            ind_new_component++;
 //        }
 //        this->components           = new_components;
-/
+//    }
+//===============================================================================================
+//==========================saturateComponent====================================================
+//===============================================================================================
+    inline void saturateComponent(const uint32_t & ind_com)
+    {   //this component is uncuttable and needs to be removed from further graph-cuts
+        EdgeAttributeMap<T> edge_attribute_map
+                                    = boost::get(boost::edge_bundle, this->main_graph);
+        this->saturated_components[ind_com] = true;
+        for (uint32_t i_ver = 0;  i_ver < this->components[ind_com].size(); i_ver++)
+        {
+            VertexDescriptor<T> desc_v = this->components[ind_com][i_ver];
+            // because of the adjacency structure NEVER access edge (source,v) directly!
+            EdgeDescriptor edg_ver2source = boost::edge(desc_v, this->source,this->main_graph).first;
+            EdgeDescriptor edg_source2ver = edge_attribute_map(edg_ver2source).edge_reverse; //use edge_reverse instead
+            EdgeDescriptor edg_sink2ver   = boost::edge(desc_v, this->sink,this->main_graph).first;
+            // we set the capacities of edges to source and sink to zero
+            edge_attribute_map(edg_source2ver).capacity = 0.;
+            edge_attribute_map(edg_sink2ver).capacity = 0.;
+        }
+    }
+};
+}
