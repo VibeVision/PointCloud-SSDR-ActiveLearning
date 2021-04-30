@@ -770,4 +770,42 @@ class CutPursuit
 //                               += reduced_vertex_attribute_map(mergeing_information.comp2).weight;
 //                //the new value is already computed in mergeing_information
 //                reduced_vertex_attribute_map(mergeing_information.comp1).value  = mergeing_information.merged_value;
+//                //we deactivate the border between comp1 and comp2
+//                for (ite_border_edge = this->borders.at(mergeing_information.border_index).begin();
+//                    ite_border_edge != this->borders.at(mergeing_information.border_index).end() ; ++ite_border_edge)
+//                {
+//                     edge_attribute_map(*ite_border_edge).isActive = false;
+//                }
+//                to_destroy.at(mergeing_information.comp2) = true;
+//std::cout << "=> " << reduced_vertex_index_map(current_vertex) << " IS OF SIZE"<< reduced_vertex_attribute_map(current_vertex).weight << std::endl;
+
+//            }
+//            //if (!has_merged)
+//            //{
+//                break;
+//            //}
+//        }
+//        //we now rebuild the vectors components, rootComponents and saturated_components
+//        std::vector<std::vector<VertexDescriptor<T>>> new_components;
+//        uint32_t ind_new_component = 0;
+//        for (uint32_t ind_com = 0; ind_com < this->components.size(); ind_com++)
+//        {
+//            if (to_destroy.at(ind_com))
+//            {   //this component has been removed
+//                continue;
+//            }//this components is kept
+//            new_components.push_back(this->components.at(ind_com));
+//            //if (is_merged.at(ind_com))
+//            //{   //we need to update the value of the vertex in this component
+//                for (uint32_t ind_ver = 0; ind_ver < this->components[ind_com].size(); ++ind_ver)
+//                {
+//                    vertex_attribute_map(this->components[ind_com][ind_ver]).value
+//                        = reduced_vertex_attribute_map(boost::vertex(ind_com, this->reduced_graph)).value;
+//                    vertex_attribute_map(this->components[ind_com][ind_ver]).in_component
+//                        = ind_new_component;//ind_com;
+//                }
+//            //}
+//            ind_new_component++;
+//        }
+//        this->components           = new_components;
 /
