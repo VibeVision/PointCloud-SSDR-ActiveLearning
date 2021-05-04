@@ -93,4 +93,40 @@ class CutPursuit_KL : public CutPursuit<T>
                        this->source,
                        this->sink);
             for (uint32_t  i_com = 0; i_com < nb_comp; i_com++)
-           
+            {
+                if (this->saturated_components[i_com])
+                {
+                    continue;
+                }
+                for (uint32_t  i_ver = 0;  i_ver < this->components[i_com].size(); i_ver++)
+                {
+                    binary_label[vertex_index_map(this->components[i_com][i_ver])]
+                          = (vertex_attribute_map(this->components[i_com][i_ver]).color
+                          == vertex_attribute_map(this->sink).color);
+                 }
+             }
+        }
+        saturation = this->activate_edges();
+        return saturation;
+    }
+    //=============================================================================================
+    //=============================    INIT_KL  ===================================================
+    //=============================================================================================
+    inline void init_labels(std::vector<bool> & binary_label)
+    { //-----initialize the labelling for each components with kmeans------------------------------
+        VertexAttributeMap<T> vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->main_graph);
+        VertexIndexMap<T> vertex_index_map = boost::get(boost::vertex_index, this->main_graph);
+        std::vector< std::vector<T> > kernels(2, std::vector<T>(this->dim));
+        std::vector< std::vector<T> > smooth_kernels(2, std::vector<T>(this->dim));
+        T total_weight[2];
+        uint32_t  nb_comp = this->components.size();
+        T best_energy, current_energy;
+        //#pragma omp parallel for private(kernels, total_weight, best_energy, current_energy) if (this->parameter.parallel && nb_comp>8) schedule(dynamic)
+        for (uint32_t  i_com = 0; i_com < nb_comp; i_com++)
+        {
+            uint32_t  comp_size = this->components[i_com].size();
+            std::vector<bool> potential_label(comp_size);    
+            std::vector<T> energy_array(comp_size);
+            std::vector<T> constant_part(comp_size);
+            std::vector< std::vector<T> > smooth_
