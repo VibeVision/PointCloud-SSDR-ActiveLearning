@@ -129,4 +129,43 @@ class CutPursuit_KL : public CutPursuit<T>
             std::vector<bool> potential_label(comp_size);    
             std::vector<T> energy_array(comp_size);
             std::vector<T> constant_part(comp_size);
-            std::vector< std::vector<T> > smooth_
+            std::vector< std::vector<T> > smooth_obs(comp_size, std::vector<T>(2,0));
+            if (this->saturated_components[i_com] || comp_size <= 1)
+            {
+                continue;
+            }
+            //KL fidelity has a part that depends
+            //purely on the observation that can be precomputed
+            //#pragma omp parallel for if (this->parameter.parallel && nb_comp<=8) schedule(dynamic)
+            for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+            {
+                constant_part[i_ver] = 0;
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                {
+                    smooth_obs[i_ver][i_dim] = 0;
+                }
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                {
+                    smooth_obs[i_ver][i_dim] =
+                        this->parameter.smoothing / this->dim
+                        + (1 - this->parameter.smoothing)
+                        * vertex_attribute_map(this->components[i_com][i_ver]).observation[i_dim];
+                    constant_part[i_ver] += smooth_obs[i_ver][i_dim]
+                           * log(smooth_obs[i_ver][i_dim]) 
+                           * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                 }
+            }
+            for (uint32_t  init_kmeans = 0; init_kmeans < this->parameter.kmeans_resampling; init_kmeans++)
+            {
+                //----- initialization with KM++ ------------------
+                // first kernel chosen randomly
+                uint32_t  first_kernel  = std::rand() % comp_size, second_kernel = 0;
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                {   //fill the first kernel
+                    kernels[0][i_dim] = vertex_attribute_map(this->components[i_com][first_kernel ]).observation[i_dim];
+                    smooth_kernels[0][i_dim] =  this->parameter.smoothing
+                        / this->dim + (1 - this->parameter.smoothing)
+                        * kernels[0][i_dim];
+                }
+                //now compute the square distance of each pouint32_t to this kernel
+                best_energy = 0; //en
