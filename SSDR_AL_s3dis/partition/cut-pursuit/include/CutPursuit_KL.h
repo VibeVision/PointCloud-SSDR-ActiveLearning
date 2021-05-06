@@ -168,4 +168,42 @@ class CutPursuit_KL : public CutPursuit<T>
                         * kernels[0][i_dim];
                 }
                 //now compute the square distance of each pouint32_t to this kernel
-                best_energy = 0; //en
+                best_energy = 0; //energy total
+                //#pragma omp parallel for if (this->parameter.parallel && nb_comp<=8) schedule(dynamic)
+                for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                {
+                    energy_array[i_ver] = constant_part[i_ver];
+                    for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                    {
+                         energy_array[i_ver] -=
+                            smooth_obs[i_ver][i_dim]
+                            * log(smooth_kernels[0][i_dim])
+                            * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                    }
+                    energy_array[i_ver] = pow(energy_array[i_ver],2);
+                    best_energy += energy_array[i_ver];
+                } // we now generate a random number to determinate which node will be the second kernel
+                if (best_energy==0)
+                { //all the points in this components are identical
+                    for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                    {
+                        binary_label[vertex_index_map(this->components[i_com][i_ver])] = false;
+                    }
+                   break;
+                }
+                //we now choose the second kernel with a probability
+                //proportional to the square distance
+                T random_sample = ((T)(rand())) / ((T)(RAND_MAX));
+                current_energy = best_energy * random_sample;
+                for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                {
+                    current_energy -= energy_array[i_ver];
+                    if (current_energy < 0)
+                    { //we have selected the second kernel
+                        second_kernel = i_ver;
+                        break;
+                    }
+                }
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                { // now fill the second kernel
+   
