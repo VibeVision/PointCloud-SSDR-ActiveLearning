@@ -206,4 +206,37 @@ class CutPursuit_KL : public CutPursuit<T>
                 }
                 for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
                 { // now fill the second kernel
-   
+                   kernels[1][i_dim] = vertex_attribute_map(this->components[i_com][second_kernel]).observation[i_dim];
+                   smooth_kernels[1][i_dim] =  this->parameter.smoothing
+                            / this->dim + (1 - this->parameter.smoothing)
+                            * kernels[1][i_dim];
+                }
+                //----main kmeans loop-----
+                for (uint32_t  ite_kmeans = 0; ite_kmeans < this->parameter.kmeans_ite; ite_kmeans++)
+                {
+                    //--affectation step: associate each node with its closest kernel-------------------
+                    //#pragma omp parallel for if (this->parameter.parallel && nb_comp<=8) schedule(dynamic)
+                    for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                    {
+                        //the distance to each kernel
+                        std::vector<T> distance_kernels(2, constant_part[i_ver]);
+                        for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                        {
+                            distance_kernels[0] -= smooth_obs[i_ver][i_dim]
+                                * log(smooth_kernels[0][i_dim])
+                                * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                            distance_kernels[1] -= smooth_obs[i_ver][i_dim]
+                                * log(smooth_kernels[1][i_dim])
+                                * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                        }
+                        potential_label[i_ver] = distance_kernels[0] > distance_kernels[1];
+                    }
+                    //-----computation of the new kernels----------------------------
+                    total_weight[0] = 0.;
+                    total_weight[1] = 0.;
+                    for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                    {
+                       kernels[0][i_dim] = 0;
+                       kernels[1][i_dim] = 0;
+                    }
+                    for (uint32_t  i_ver = 0;  i_ver < co
