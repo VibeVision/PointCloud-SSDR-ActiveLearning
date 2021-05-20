@@ -354,4 +354,44 @@ class CutPursuit_KL : public CutPursuit<T>
                     for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
                     {
                        centers.centroids[i_com][0][i_dim] += vertex_attribute_map(this->components[i_com][i_ver]).observation[i_dim]
-                                          
+                                                * vertex_attribute_map(this->components[i_com][i_ver]).weight ;
+                    }
+                }
+                else
+                {
+                   total_weight[1] += vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                   for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                   {
+                      centers.centroids[i_com][1][i_dim] += vertex_attribute_map(this->components[i_com][i_ver]).observation[i_dim]
+                                               * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                   }
+                }
+            }
+            if ((total_weight[0] == 0)||(total_weight[1] == 0))
+            {
+                //the component is saturated
+                this->saturateComponent(i_com);
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                {
+                    centers.centroids[i_com][0][i_dim] = vertex_attribute_map(this->components[i_com].back()).value[i_dim];
+                    centers.centroids[i_com][1][i_dim] = vertex_attribute_map(this->components[i_com].back()).value[i_dim];
+                }
+            }
+            else
+            {
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                {
+                    centers.centroids[i_com][0][i_dim] = centers.centroids[i_com][0][i_dim] / total_weight[0];
+                    centers.centroids[i_com][1][i_dim] = centers.centroids[i_com][1][i_dim] / total_weight[1];
+                }
+            }
+        }
+        return;
+    }
+    //=============================================================================================
+    //=============================   SET_CAPACITIES     ==========================================
+    //=============================================================================================
+    inline void set_capacities(const VectorOfCentroids<T> & centers)
+    {
+        VertexAttributeMap<T> vertex_attribute_map
+                = boost::get(boost::vert
