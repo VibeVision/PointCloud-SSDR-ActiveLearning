@@ -432,4 +432,52 @@ class CutPursuit_KL : public CutPursuit<T>
                            * vertex_attribute_map(desc_v).observation[i_dim];
                     smoothedValueB =
                              this->parameter.smoothing / this->dim
-                           + (1 - this->pa
+                           + (1 - this->parameter.smoothing)
+                           *  centers.centroids[i_com][0][i_dim];
+                    smoothedValueNotB =
+                             this->parameter.smoothing / this->dim
+                           + (1 - this->parameter.smoothing)
+                           *  centers.centroids[i_com][1][i_dim];
+                    cost_B    += smoothedObservation
+                              * (log(smoothedObservation)
+                              -  log(smoothedValueB));
+                    cost_notB += smoothedObservation
+                              * (log(smoothedObservation)
+                              -  log(smoothedValueNotB));
+                }
+                if (cost_B>cost_notB)
+                {
+                    edge_attribute_map(desc_source2v).capacity = cost_B - cost_notB;
+                    edge_attribute_map(desc_v2sink).capacity   = 0.;
+                }
+                else
+                {
+                    edge_attribute_map(desc_source2v).capacity = 0.;
+                    edge_attribute_map(desc_v2sink).capacity   = cost_notB - cost_B;
+                }
+            }
+        }
+        //----then set the vertex to vertex edges ---------------------------------------------
+        EdgeIterator<T> i_edg, i_edg_end;
+        for (boost::tie(i_edg, i_edg_end) = boost::edges(this->main_graph);
+             i_edg != i_edg_end; ++i_edg)
+        {
+            if (!edge_attribute_map(*i_edg).realEdge)
+            {
+                continue;
+            }
+            if (!edge_attribute_map(*i_edg).isActive)
+            {
+                edge_attribute_map(*i_edg).capacity
+                        = edge_attribute_map(*i_edg).weight * this->parameter.reg_strenth;
+            }
+            else
+            {
+                edge_attribute_map(*i_edg).capacity = 0;
+            }
+        }
+    }
+    //=============================================================================================
+    //=================================   COMPUTE_VALUE   =========================================
+    //=============================================================================================
+    virtual
