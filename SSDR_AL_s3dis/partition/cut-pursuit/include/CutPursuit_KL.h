@@ -480,4 +480,43 @@ class CutPursuit_KL : public CutPursuit<T>
     //=============================================================================================
     //=================================   COMPUTE_VALUE   =========================================
     //=============================================================================================
-    virtual
+    virtual std::pair<std::vector<T>, T> compute_value(const uint32_t  & i_com) override
+    {
+        VertexAttributeMap<T> vertex_attribute_map
+                                    = boost::get(boost::vertex_bundle, this->main_graph);
+        T total_weight = 0;
+        std::vector<T> compValue(this->dim);
+        std::fill((compValue.begin()),(compValue.end()),0);
+        for (uint32_t  ind_ver = 0; ind_ver < this->components[i_com].size(); ++ind_ver)
+        {
+            total_weight += vertex_attribute_map(this->components[i_com][ind_ver]).weight;
+            for(uint32_t  i_dim=0; i_dim<this->dim; i_dim++)
+            {
+                compValue[i_dim] += vertex_attribute_map(this->components[i_com][ind_ver]).observation[i_dim]
+                    * vertex_attribute_map(this->components[i_com][ind_ver]).weight;
+            }
+            vertex_attribute_map(this->components[i_com][ind_ver]).in_component = i_com;
+        }
+        for(uint32_t  i_dim=0; i_dim<this->dim; i_dim++)
+        {
+           compValue[i_dim] = compValue[i_dim] / total_weight;
+        }
+        for (uint32_t  ind_ver = 0; ind_ver < this->components[i_com].size(); ++ind_ver)
+        {
+            for(uint32_t  i_dim=0; i_dim<this->dim; i_dim++)
+            {
+                vertex_attribute_map(this->components[i_com][ind_ver]).value[i_dim] = compValue[i_dim];
+            }
+        }
+        return std::pair<std::vector<T>, T>(compValue, total_weight);
+    }
+    //=============================================================================================
+    //=================================   COMPUTE_MERGE_GAIN   =========================================
+    //=============================================================================================
+    virtual std::pair<std::vector<T>, T> compute_merge_gain(const VertexDescriptor<T> & comp1
+                                             , const VertexDescriptor<T> & comp2) override
+    {
+        VertexAttributeMap<T> reduced_vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->reduced_graph);
+        std::vector<T> merge_value(this->dim);
+        T gain = 0, smoothe
