@@ -72,4 +72,37 @@ using EdgeIndexMap   = typename boost::property_map<Graph<T>, uint32_t EdgeAttri
 
 template <typename T>
 bool addDoubledge(Graph<T> & g, const VertexDescriptor<T> & source, const VertexDescriptor<T> & target
-                  ,const T weight, uint32_t eInd
+                  ,const T weight, uint32_t eIndex, EdgeAttributeMap<T> & edge_attribute_map, bool real = true)
+{
+       // Add edges between two vertices. We have to create the edge and the reverse edge,
+       // then add the edge_reverse as the corresponding reverse edge to 'edge', and then add 'edge'
+       // as the corresponding reverse edge to 'edge_reverse'
+
+    	EdgeDescriptor edge, edge_reverse;
+    	std::pair<EdgeDescriptor, bool> edge_added = boost::add_edge(source, target, g);
+		if (edge_added.second)
+		{
+			edge = edge_added.first;
+			edge_reverse      = boost::add_edge(target, source, g).first;
+			EdgeAttribute<T> attrib_edge(weight,eIndex,real);
+			EdgeAttribute<T> attrib_edge_reverse(weight,eIndex+1,real);
+			attrib_edge.edge_reverse         = edge_reverse;
+			attrib_edge_reverse.edge_reverse  = edge;
+			edge_attribute_map(edge)        = attrib_edge;
+			edge_attribute_map(edge_reverse) = attrib_edge_reverse;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+}
+
+}
+
+
+
+
+
+
+
