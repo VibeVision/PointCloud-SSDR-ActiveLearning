@@ -67,4 +67,5 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     float * solution          = (float *) mxGetData(plhs[0]);
 
     CP::cut_pursuit<float>(nNod, nEdg, nObs, y
-      , Eu, Ev, edgeWeight, nodeWeight, solution, lambda, cutoff,  mode, spee
+      , Eu, Ev, edgeWeight, nodeWeight, solution, lambda, cutoff,  mode, speed, weight_decay, verbose);
+}
