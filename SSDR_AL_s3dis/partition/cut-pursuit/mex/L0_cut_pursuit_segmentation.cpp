@@ -42,4 +42,39 @@
 //      1 : recommended (default)
 //      2 : fast but approximated (no backward step)
 //      3 : ludicrous - for prototyping (no backward step)
-// 1 x 1 b
+// 1 x 1 bool verose : verbosity
+//      0 : silent
+//      1 : recommended (default)
+//      2 : chatty
+//-----OUTPUT-----
+// N x 1 float  solution: piecewise constant approximation
+// N x 1 int inComponent: for each node, in which component it belongs
+// n_nodes_red x 1 cell components : for each component, list of the nodes
+// 1 x 1 int n_nodes_red : number of components
+// 1 x 1 int n_edges_red : number of edges in reduced graph
+// n_edges_red x 1 int Eu_red, Ev_red : source and target of reduced edges
+// n_edges_red x 1 float edge_weight_red: weights of reduced edges
+// n_nodes_red x 1  float node_weight_red: weights of reduced nodes
+// n_edges_red x 1 cell vertices_border: for each edge of the reduced graph,
+//  the list of index of the edges composing the interface between components
+
+
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+{
+    //---read dimensions----//
+    const int n_nodes = mxGetN(prhs[0]); //number of nodes
+    const int nObs = mxGetM(prhs[0]); // size of observation for each node
+    const int nEdg = mxGetNumberOfElements(prhs[1]); //number of edges
+    //---read inputs----
+    std::vector< std::vector<float> > observation(n_nodes);
+    const std::vector<uint32_t> Eu((uint32_t*)mxGetData(prhs[1]), (uint32_t*)mxGetData(prhs[1])+nEdg);
+    const std::vector<uint32_t> Ev((uint32_t*)mxGetData(prhs[2]), (uint32_t*)mxGetData(prhs[2])+nEdg);
+    const float lambda        = (float) mxGetScalar(prhs[3]); //reg strength
+    const std::vector<float> edge_weight((float*)mxGetData(prhs[4]), (float*)mxGetData(prhs[4])+nEdg);
+    const std::vector<float> node_weight((float*)mxGetData(prhs[5]), (float*)mxGetData(prhs[5])+n_nodes);
+    const float mode          = (float) mxGetScalar(prhs[6]); //fidelity
+    const uint32_t cutoff     = (uint32_t) mxGetScalar(prhs[7]); //cut off
+    const float speed         = (float) mxGetScalar(prhs[8]); //speed mode
+    const float weight_decay  = (float) mxGetScalar(prhs[9]); //weight decay*/
+    const float verbose       = (float) mxGetScalar(prhs[10]); //verbosity*/
+    //--fill the observatio
