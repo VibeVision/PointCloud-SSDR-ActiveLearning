@@ -77,4 +77,59 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     const float speed         = (float) mxGetScalar(prhs[8]); //speed mode
     const float weight_decay  = (float) mxGetScalar(prhs[9]); //weight decay*/
     const float verbose       = (float) mxGetScalar(prhs[10]); //verbosity*/
-    //--fill the observatio
+    //--fill the observation----
+    const float *observation_array = (float*) mxGetData(prhs[0]);
+    std::vector< std::vector<float> > solution(n_nodes);
+    int ind_obs = 0;
+    for (int ind_nod = 0; ind_nod < n_nodes; ind_nod++)
+    {
+        observation[ind_nod] = std::vector<float>(nObs);
+        solution[ind_nod]    = std::vector<float>(nObs);
+        for (int ind_dim = 0; ind_dim < nObs; ind_dim++)
+        {   
+            observation[ind_nod][ind_dim] = observation_array[ind_obs];
+            ind_obs++;
+        }
+    }
+    //---set up output--------------------------------
+    //plhs[0] = mxDuplicateArray(prhs[0]);
+    uint32_t * in_component_array, * Eu_red_array, * Ev_red_array;
+    float * edge_weight_red_array, * node_weight_red_array;
+    uint32_t n_nodes_red, n_edges_red;
+    std::vector<uint32_t> in_component, Eu_red, Ev_red;
+    std::vector< std::vector<uint32_t> > components;
+    std::vector<float>  edge_weight_red, node_weight_red;
+
+    if (true)
+    {
+    CP::cut_pursuit<float>(n_nodes, nEdg, nObs
+            , observation, Eu, Ev, edge_weight, node_weight
+            , solution
+            , in_component, components
+            , n_nodes_red, n_edges_red,  Eu_red, Ev_red
+            , edge_weight_red,node_weight_red
+            ,lambda, cutoff, mode, speed, weight_decay, verbose);
+    }
+    if (true)
+    {
+        //std::cout << in_component[0] << " " << in_component[1000] << " " << in_component[1000000] << std::endl;
+        
+
+        //float *  edge_weight_red_array, * node_weight_red_array;
+
+    //-----------fill solution----------
+    plhs[0] = mxDuplicateArray(prhs[0]);
+    float * solution_array = (float *) mxGetData(plhs[0]);
+    ind_obs = 0;
+    for (int ind_nod = 0; ind_nod < n_nodes; ind_nod++)
+    {
+        for (int ind_dim = 0; ind_dim < nObs; ind_dim++)
+        {
+            solution_array[ind_obs] = solution[ind_nod][ind_dim];
+            ind_obs++;
+        }
+    }
+    //----------fill in_component----------
+    plhs[1] = mxCreateNumericMatrix(n_nodes, 1 , mxUINT32_CLASS, mxREAL);
+    in_component_array = (uint32_t*) mxGetData(plhs[1]);
+   
