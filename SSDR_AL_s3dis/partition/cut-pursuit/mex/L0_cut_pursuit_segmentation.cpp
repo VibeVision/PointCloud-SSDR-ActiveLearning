@@ -132,4 +132,38 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     //----------fill in_component----------
     plhs[1] = mxCreateNumericMatrix(n_nodes, 1 , mxUINT32_CLASS, mxREAL);
     in_component_array = (uint32_t*) mxGetData(plhs[1]);
-   
+    std::copy(in_component.begin(), in_component.end(), in_component_array);
+
+    //----------fill components----------
+    mxArray *components_ptr = mxCreateCellMatrix(n_nodes_red , 1 );
+    for(int ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++)
+    {
+        std::size_t comp_size = components[ind_nod_red].size();
+        mxArray * one_component_ptr;
+        //std::cout << ind_nod_red << " " << comp_size << std::endl;
+        one_component_ptr = mxCreateNumericMatrix(comp_size , 1, mxINT32_CLASS, mxREAL);
+        std::copy(components[ind_nod_red].begin(), components[ind_nod_red].end(), (int*) mxGetData(one_component_ptr));
+        //memcpy(mxGetPr(one_component_ptr), &components[ind_nod_red][0], sizeof(int) * comp_size);
+        mxSetCell(components_ptr, ind_nod_red, one_component_ptr );
+    }
+    plhs[2] = components_ptr;
+    //----------fill Eu_red----------
+    plhs[3] = mxCreateNumericMatrix(n_edges_red, 1 , mxINT32_CLASS, mxREAL);
+    Eu_red_array = (uint32_t*) mxGetData(plhs[3]);
+    std::copy(Eu_red.begin(), Eu_red.end(), Eu_red_array);
+    //----------fill Ev_red----------
+    plhs[4] = mxCreateNumericMatrix(n_edges_red, 1 , mxINT32_CLASS, mxREAL);
+    Ev_red_array = (uint32_t*) mxGetData(plhs[4]);
+    std::copy(Ev_red.begin(), Ev_red.end(), Ev_red_array);
+    //----------fill edge_weight_red----------
+    plhs[5] = mxCreateNumericMatrix(n_edges_red, 1 ,mxSINGLE_CLASS, mxREAL);
+    edge_weight_red_array = (float*) mxGetData(plhs[5]);
+    std::copy(edge_weight_red.begin(), edge_weight_red.end(), edge_weight_red_array);
+    //----------fill edge_weight_red----------
+    plhs[6] = mxCreateNumericMatrix(n_nodes_red, 1 , mxSINGLE_CLASS, mxREAL);
+    node_weight_red_array = (float*) mxGetData(plhs[6]);
+    std::copy(node_weight_red.begin(), node_weight_red.end(), node_weight_red_array);
+    }
+    return;
+}
+
