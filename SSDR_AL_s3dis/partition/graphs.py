@@ -56,4 +56,38 @@ def compute_graph_nn_2(xyz, k_nn1, k_nn2, voronoi = 0.0):
         
         dump, unique_edges = np.unique(edg_id, return_index = True)
         graph["source"] = graph["source"][unique_edges]
-        graph["target"] = graph["target"][unique_
+        graph["target"] = graph["target"][unique_edges]
+       
+        graph["distances"] = graph["distances"][keep_edges]
+    else:
+        neighbors = neighbors[:, :k_nn1]
+        distances = distances[:, :k_nn1]
+        graph["source"] = np.matlib.repmat(range(0, n_ver)
+            , k_nn1, 1).flatten(order='F').astype('uint32')
+        graph["target"] = np.transpose(neighbors.flatten(order='C')).astype('uint32')
+        graph["distances"] = distances.flatten().astype('float32')
+    #save the graph
+    return graph, target2
+#------------------------------------------------------------------------------
+def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
+    """compute the partition graph with superpoints and superedges features"""
+    n_com = max(in_component)+1
+    in_component = np.array(in_component)
+    has_labels = len(labels) > 1
+    label_hist = has_labels and len(labels.shape) > 1 and labels.shape[1] > 1
+    #---compute delaunay triangulation---
+    tri = Delaunay(xyz)
+    #interface select the edges between different components
+    #edgx and edgxr converts from tetrahedrons to edges
+	#done separatly for each edge of the tetrahedrons to limit memory impact
+    interface = in_component[tri.vertices[:, 0]] != in_component[tri.vertices[:, 1]]
+    edg1 = np.vstack((tri.vertices[interface, 0], tri.vertices[interface, 1]))
+    edg1r = np.vstack((tri.vertices[interface, 1], tri.vertices[interface, 0]))
+    interface = in_component[tri.vertices[:, 0]] != in_component[tri.vertices[:, 2]]
+    edg2 = np.vstack((tri.vertices[interface, 0], tri.vertices[interface, 2]))
+    edg2r = np.vstack((tri.vertices[interface, 2], tri.vertices[interface, 0]))
+    interface = in_component[tri.vertices[:, 0]] != in_component[tri.vertices[:, 3]]
+    edg3 = np.vstack((tri.vertices[interface, 0], tri.vertices[interface, 3]))
+    edg3r = np.vstack((tri.vertices[interface, 3], tri.vertices[interface, 0]))
+    interface = in_component[tri.vertices[:, 1]] != in_component[tri.vertices[:, 2]]
+    edg4 = np
