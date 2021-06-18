@@ -127,4 +127,44 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     graph["sp_volume"] = np.zeros((n_com, 1), dtype='float32')
     graph["sp_point_count"] = np.zeros((n_com, 1), dtype='uint64')
     graph["source"] = np.zeros((n_sedg, 1), dtype='uint32')
-    graph["ta
+    graph["target"] = np.zeros((n_sedg, 1), dtype='uint32')
+    graph["se_delta_mean"] = np.zeros((n_sedg, 3), dtype='float32')
+    graph["se_delta_std"] = np.zeros((n_sedg, 3), dtype='float32')
+    graph["se_delta_norm"] = np.zeros((n_sedg, 1), dtype='float32')
+    graph["se_delta_centroid"] = np.zeros((n_sedg, 3), dtype='float32')
+    graph["se_length_ratio"] = np.zeros((n_sedg, 1), dtype='float32')
+    graph["se_surface_ratio"] = np.zeros((n_sedg, 1), dtype='float32')
+    graph["se_volume_ratio"] = np.zeros((n_sedg, 1), dtype='float32')
+    graph["se_point_count_ratio"] = np.zeros((n_sedg, 1), dtype='float32')
+    if has_labels:
+        graph["sp_labels"] = np.zeros((n_com, n_labels + 1), dtype='uint32')
+    else:
+        graph["sp_labels"] = []
+    #---compute the partition features---
+    for i_com in range(0, n_com):
+        comp = components[i_com]
+        if has_labels and not label_hist:
+            graph["sp_labels"][i_com, :] = np.histogram(labels[comp]
+                , bins=[float(i)-0.5 for i in range(0, n_labels + 2)])[0]
+        if has_labels and label_hist:
+            graph["sp_labels"][i_com, :] = sum(labels[comp,:])
+        graph["sp_point_count"][i_com] = len(comp)
+        xyz_sp = np.unique(xyz[comp, :], axis=0)
+        if len(xyz_sp) == 1:
+            graph["sp_centroids"][i_com] = xyz_sp
+            graph["sp_length"][i_com] = 0
+            graph["sp_surface"][i_com] = 0
+            graph["sp_volume"][i_com] = 0
+        elif len(xyz_sp) == 2:
+            graph["sp_centroids"][i_com] = np.mean(xyz_sp, axis=0)
+            graph["sp_length"][i_com] = np.sqrt(np.sum(np.var(xyz_sp, axis=0)))
+            graph["sp_surface"][i_com] = 0
+            graph["sp_volume"][i_com] = 0
+        else:
+            ev = LA.eig(np.cov(np.transpose(xyz_sp), rowvar=True))
+            ev = -np.sort(-ev[0]) #descending order
+            graph["sp_centroids"][i_com] = np.mean(xyz_sp, axis=0)
+            try:
+                graph["sp_length"][i_com] = ev[0]
+            except TypeError:
+                graph["sp_length"][i
