@@ -90,4 +90,41 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
     edg3 = np.vstack((tri.vertices[interface, 0], tri.vertices[interface, 3]))
     edg3r = np.vstack((tri.vertices[interface, 3], tri.vertices[interface, 0]))
     interface = in_component[tri.vertices[:, 1]] != in_component[tri.vertices[:, 2]]
-    edg4 = np
+    edg4 = np.vstack((tri.vertices[interface, 1], tri.vertices[interface, 2]))
+    edg4r = np.vstack((tri.vertices[interface, 2], tri.vertices[interface, 1]))
+    interface = in_component[tri.vertices[:, 1]] != in_component[tri.vertices[:, 3]]
+    edg5 = np.vstack((tri.vertices[interface, 1], tri.vertices[interface, 3]))
+    edg5r = np.vstack((tri.vertices[interface, 3], tri.vertices[interface, 1]))
+    interface = in_component[tri.vertices[:, 2]] != in_component[tri.vertices[:, 3]]
+    edg6 = np.vstack((tri.vertices[interface, 2], tri.vertices[interface, 3]))
+    edg6r = np.vstack((tri.vertices[interface, 3], tri.vertices[interface, 2]))
+    del tri, interface
+    edges = np.hstack((edg1, edg2, edg3, edg4 ,edg5, edg6, edg1r, edg2r,
+                       edg3r, edg4r ,edg5r, edg6r))
+    del edg1, edg2, edg3, edg4 ,edg5, edg6, edg1r, edg2r, edg3r, edg4r, edg5r, edg6r
+    edges = np.unique(edges, axis=1)
+    
+    if d_max > 0:
+        dist = np.sqrt(((xyz[edges[0,:]]-xyz[edges[1,:]])**2).sum(1))
+        edges = edges[:,dist<d_max]
+	
+    #---sort edges by alpha numeric order wrt to the components of their source/target---
+    n_edg = len(edges[0])
+    edge_comp = in_component[edges]
+    edge_comp_index = n_com * edge_comp[0,:] +  edge_comp[1,:]
+    order = np.argsort(edge_comp_index)
+    edges = edges[:, order]
+    edge_comp = edge_comp[:, order]
+    edge_comp_index = edge_comp_index[order]
+    #marks where the edges change components iot compting them by blocks
+    jump_edg = np.vstack((0, np.argwhere(np.diff(edge_comp_index)) + 1, n_edg)).flatten()
+    n_sedg = len(jump_edg) - 1
+    #---set up the edges descriptors---
+    graph = dict([("is_nn", False)])
+    graph["sp_centroids"] = np.zeros((n_com, 3), dtype='float32')
+    graph["sp_length"] = np.zeros((n_com, 1), dtype='float32')
+    graph["sp_surface"] = np.zeros((n_com, 1), dtype='float32')
+    graph["sp_volume"] = np.zeros((n_com, 1), dtype='float32')
+    graph["sp_point_count"] = np.zeros((n_com, 1), dtype='uint64')
+    graph["source"] = np.zeros((n_sedg, 1), dtype='uint32')
+    graph["ta
