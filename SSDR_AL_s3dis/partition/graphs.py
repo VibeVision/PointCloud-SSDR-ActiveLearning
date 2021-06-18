@@ -167,4 +167,40 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
             try:
                 graph["sp_length"][i_com] = ev[0]
             except TypeError:
-                graph["sp_length"][i
+                graph["sp_length"][i_com] = 0
+            try:
+                graph["sp_surface"][i_com] = np.sqrt(ev[0] * ev[1] + 1e-10)
+            except TypeError:
+                graph["sp_surface"][i_com] = 0
+            try:
+                graph["sp_volume"][i_com] = np.sqrt(ev[0] * ev[1] * ev[2] + 1e-10)
+            except TypeError:
+                graph["sp_volume"][i_com] = 0
+    #---compute the superedges features---
+    for i_sedg in range(0, n_sedg):
+        i_edg_begin = jump_edg[i_sedg]
+        i_edg_end = jump_edg[i_sedg + 1]
+        ver_source = edges[0, range(i_edg_begin, i_edg_end)]
+        ver_target = edges[1, range(i_edg_begin, i_edg_end)]
+        com_source = edge_comp[0, i_edg_begin]
+        com_target = edge_comp[1, i_edg_begin]
+        xyz_source = xyz[ver_source, :]
+        xyz_target = xyz[ver_target, :]
+        graph["source"][i_sedg] = com_source
+        graph["target"][i_sedg] = com_target
+        #---compute the ratio features---
+        graph["se_delta_centroid"][i_sedg,:] = graph["sp_centroids"][com_source,:] - graph["sp_centroids"][com_target, :]
+        graph["se_length_ratio"][i_sedg] = graph["sp_length"][com_source] / (graph["sp_length"][com_target] + 1e-6)
+        graph["se_surface_ratio"][i_sedg] = graph["sp_surface"][com_source] / (graph["sp_surface"][com_target] + 1e-6)
+        graph["se_volume_ratio"][i_sedg] = graph["sp_volume"][com_source] / (graph["sp_volume"][com_target] + 1e-6)
+        graph["se_point_count_ratio"][i_sedg] = graph["sp_point_count"][com_source] / (graph["sp_point_count"][com_target] + 1e-6)
+        #---compute the offset set---
+        delta = xyz_source - xyz_target
+        if len(delta) > 1:
+            graph["se_delta_mean"][i_sedg] = np.mean(delta, axis=0)
+            graph["se_delta_std"][i_sedg] = np.std(delta, axis=0)
+            graph["se_delta_norm"][i_sedg] = np.mean(np.sqrt(np.sum(delta ** 2, axis=1)))
+        else:
+            graph["se_delta_mean"][i_sedg, :] = delta
+            graph["se_delta_std"][i_sedg, :] = [0, 0, 0]
+            graph["se_delta_norm"][i_sedg] = np.sqrt(np.
