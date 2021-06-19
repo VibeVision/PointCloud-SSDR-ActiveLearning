@@ -203,4 +203,5 @@ def compute_sp_graph(xyz, d_max, in_component, components, labels, n_labels):
         else:
             graph["se_delta_mean"][i_sedg, :] = delta
             graph["se_delta_std"][i_sedg, :] = [0, 0, 0]
-            graph["se_delta_norm"][i_sedg] = np.sqrt(np.
+            graph["se_delta_norm"][i_sedg] = np.sqrt(np.sum(delta ** 2))
+    return graph
