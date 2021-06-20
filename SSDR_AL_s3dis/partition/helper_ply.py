@@ -82,4 +82,77 @@ def parse_mesh_header(plyfile, ext):
             if current_element == 'vertex':
                 line = line.split()
                 vertex_properties.append((line[2].decode(), ext + ply_dtypes[line[1]]))
-            elif c
+            elif current_element == 'vertex':
+                if not line.startswith('property list uchar int'):
+                    raise ValueError('Unsupported faces property : ' + line)
+
+    return num_points, num_faces, vertex_properties
+
+
+def read_ply(filename, triangular_mesh=False):
+    """
+    Read ".ply" files
+
+    Parameters
+    ----------
+    filename : string
+        the name of the file to read.
+
+    Returns
+    -------
+    result : array
+        data stored in the file
+
+    Examples
+    --------
+    Store data in file
+
+    >>> points = np.random.rand(5, 3)
+    >>> values = np.random.randint(2, size=10)
+    >>> write_ply('example.ply', [points, values], ['x', 'y', 'z', 'values'])
+
+    Read the file
+
+    >>> data = read_ply('example.ply')
+    >>> values = data['values']
+    array([0, 0, 1, 1, 0])
+    
+    >>> points = np.vstack((data['x'], data['y'], data['z'])).T
+    array([[ 0.466  0.595  0.324]
+           [ 0.538  0.407  0.654]
+           [ 0.850  0.018  0.988]
+           [ 0.395  0.394  0.363]
+           [ 0.873  0.996  0.092]])
+
+    """
+
+    with open(filename, 'rb') as plyfile:
+
+
+        # Check if the file start with ply
+        if b'ply' not in plyfile.readline():
+            raise ValueError('The file does not start whith the word ply')
+
+        # get binary_little/big or ascii
+        fmt = plyfile.readline().split()[1].decode()
+        if fmt == "ascii":
+            raise ValueError('The file is not binary')
+
+        # get extension for building the numpy dtypes
+        ext = valid_formats[fmt]
+
+        # PointCloud reader vs mesh reader
+        if triangular_mesh:
+
+            # Parse header
+            num_points, num_faces, properties = parse_mesh_header(plyfile, ext)
+
+            # Get point data
+            vertex_data = np.fromfile(plyfile, dtype=properties, count=num_points)
+
+            # Get face data
+            face_properties = [('k', ext + 'u1'),
+                               ('v1', ext + 'i4'),
+                               ('v2', ext + 'i4'),
+                               ('v3', ext + 'i4')]
+            faces_data = np.fromfile(plyfile,
