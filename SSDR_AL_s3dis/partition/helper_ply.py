@@ -155,4 +155,72 @@ def read_ply(filename, triangular_mesh=False):
                                ('v1', ext + 'i4'),
                                ('v2', ext + 'i4'),
                                ('v3', ext + 'i4')]
-            faces_data = np.fromfile(plyfile,
+            faces_data = np.fromfile(plyfile, dtype=face_properties, count=num_faces)
+
+            # Return vertex data and concatenated faces
+            faces = np.vstack((faces_data['v1'], faces_data['v2'], faces_data['v3'])).T
+            data = [vertex_data, faces]
+
+        else:
+
+            # Parse header
+            num_points, properties = parse_header(plyfile, ext)
+
+            # Get data
+            data = np.fromfile(plyfile, dtype=properties, count=num_points)
+
+    return data
+
+
+def header_properties(field_list, field_names):
+
+    # List of lines to write
+    lines = []
+
+    # First line describing element vertex
+    lines.append('element vertex %d' % field_list[0].shape[0])
+
+    # Properties lines
+    i = 0
+    for fields in field_list:
+        for field in fields.T:
+            lines.append('property %s %s' % (field.dtype.name, field_names[i]))
+            i += 1
+
+    return lines
+
+
+def write_ply(filename, field_list, field_names, triangular_faces=None):
+    """
+    Write ".ply" files
+
+    Parameters
+    ----------
+    filename : string
+        the name of the file to which the data is saved. A '.ply' extension will be appended to the 
+        file name if it does no already have one.
+
+    field_list : list, tuple, numpy array
+        the fields to be saved in the ply file. Either a numpy array, a list of numpy arrays or a 
+        tuple of numpy arrays. Each 1D numpy array and each column of 2D numpy arrays are considered 
+        as one field. 
+
+    field_names : list
+        the name of each fields as a list of strings. Has to be the same length as the number of 
+        fields.
+
+    Examples
+    --------
+    >>> points = np.random.rand(10, 3)
+    >>> write_ply('example1.ply', points, ['x', 'y', 'z'])
+
+    >>> values = np.random.randint(2, size=10)
+    >>> write_ply('example2.ply', [points, values], ['x', 'y', 'z', 'values'])
+
+    >>> colors = np.random.randint(255, size=(10,3), dtype=np.uint8)
+    >>> field_names = ['x', 'y', 'z', 'red', 'green', 'blue', values']
+    >>> write_ply('example3.ply', [points, colors, values], field_names)
+
+    """
+
+  
