@@ -283,4 +283,50 @@ def write_ply(filename, field_list, field_names, triangular_faces=None):
                 type_list += [(field_names[i], field.dtype.str)]
                 i += 1
         data = np.empty(field_list[0].shape[0], dtype=type_list)
-        i = 
+        i = 0
+        for fields in field_list:
+            for field in fields.T:
+                data[field_names[i]] = field
+                i += 1
+
+        data.tofile(plyfile)
+
+        if triangular_faces is not None:
+            triangular_faces = triangular_faces.astype(np.int32)
+            type_list = [('k', 'uint8')] + [(str(ind), 'int32') for ind in range(3)]
+            data = np.empty(triangular_faces.shape[0], dtype=type_list)
+            data['k'] = np.full((triangular_faces.shape[0],), 3, dtype=np.uint8)
+            data['0'] = triangular_faces[:, 0]
+            data['1'] = triangular_faces[:, 1]
+            data['2'] = triangular_faces[:, 2]
+            data.tofile(plyfile)
+
+    return True
+
+
+def describe_element(name, df):
+    """ Takes the columns of the dataframe and builds a ply-like description
+
+    Parameters
+    ----------
+    name: str
+    df: pandas DataFrame
+
+    Returns
+    -------
+    element: list[str]
+    """
+    property_formats = {'f': 'float', 'u': 'uchar', 'i': 'int'}
+    element = ['element ' + name + ' ' + str(len(df))]
+
+    if name == 'face':
+        element.append("property list uchar int points_indices")
+
+    else:
+        for i in range(len(df.columns)):
+            # get first letter of dtype to infer format
+            f = property_formats[str(df.dtypes[i])[0]]
+            element.append('property ' + f + ' ' + df.columns.values[i])
+
+    return element
+
