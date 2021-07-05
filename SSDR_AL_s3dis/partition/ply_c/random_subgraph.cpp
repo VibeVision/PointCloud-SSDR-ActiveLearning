@@ -88,4 +88,11 @@ void random_subgraph(const int n_ver, const int n_edg, const uint32_t * Eu, cons
             }
         }
 
-        for (int i_edg = 
+        for (int i_edg = 0; i_edg < n_edg; i_edg++)
+        {   //add edges between selected vertices
+            selected_edges[i_edg] = selected_vertices[vertex_index_map(vertex(Eu[i_edg],G))]
+                                  * selected_vertices[vertex_index_map(vertex(Ev[i_edg],G))];
+        }
+    return;
+}
+}
