@@ -85,4 +85,42 @@ def error2ply(filename, xyz, rgb, labels, prediction):
         else:
             color_hsv[0] = 0
         color_hsv[1] = min(1, color_hsv[1] + 0.3)
-        color_hsv
+        color_hsv[2] = min(1, color_hsv[2] + 0.1)
+        color_rgb[i_ver,:] = list(colorsys.hsv_to_rgb(color_hsv[0], color_hsv[1], color_hsv[2]))
+    color_rgb = np.array(color_rgb*255, dtype='u1')
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = xyz[:, i]
+    for i in range(0, 3):
+        vertex_all[prop[i+3][0]] = color_rgb[:, i]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def spg2ply(filename, spg_graph):
+    """write a ply displaying the SPG by adding edges between its centroid"""
+    vertex_prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4')]
+    vertex_val = np.empty((spg_graph['sp_centroids']).shape[0], dtype=vertex_prop)
+    for i in range(0, 3):
+        vertex_val[vertex_prop[i][0]] = spg_graph['sp_centroids'][:, i]
+    edges_prop = [('vertex1', 'int32'), ('vertex2', 'int32')]
+    edges_val = np.empty((spg_graph['source']).shape[0], dtype=edges_prop)
+    edges_val[edges_prop[0][0]] = spg_graph['source'].flatten()
+    edges_val[edges_prop[1][0]] = spg_graph['target'].flatten()
+    ply = PlyData([PlyElement.describe(vertex_val, 'vertex'), PlyElement.describe(edges_val, 'edge')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def scalar2ply(filename, xyz, scalar):
+    """write a ply with an unisgned integer scalar field"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('scalar', 'f4')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = xyz[:, i]
+    vertex_all[prop[3][0]] = scalar
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def get_color_from_label(object_label, dataset):
+    """associate the color corresponding to the class"""
+ 
