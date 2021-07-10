@@ -206,4 +206,58 @@ def read_s3dis_format(raw_path, label_out=True):
         object_name = os.path.splitext(os.path.basename(single_object))[0]
         print("        adding object " + str(i_object) + " : "  + object_name)
         object_class = object_name.split('_')[0]
-        object_label =
+        object_label = object_name_to_label(object_class)
+        #obj_ver = genfromtxt(single_object, delimiter=' ')
+        obj_ver = pd.read_csv(single_object, sep=' ', header=None).values
+        distances, obj_ind = nn.kneighbors(obj_ver[:, 0:3])
+        room_labels[obj_ind] = object_label
+        room_object_indices[obj_ind] = i_object
+        i_object = i_object + 1
+
+    return xyz, rgb, room_labels, room_object_indices
+#------------------------------------------------------------------------------
+def read_vkitti_format(raw_path):
+#S3DIS specific
+    """extract data from a room folder"""
+    data = np.load(raw_path)
+    xyz = data[:, 0:3]
+    rgb = data[:, 3:6]
+    labels = data[:, -1]+1
+    labels[(labels==14).nonzero()] = 0
+    return xyz, rgb, labels
+#------------------------------------------------------------------------------
+def object_name_to_label(object_class):
+    """convert from object name in S3DIS to an int"""
+    object_label = {
+        'ceiling': 1,
+        'floor': 2,
+        'wall': 3,
+        'column': 4,
+        'beam': 5,
+        'window': 6,
+        'door': 7,
+        'table': 8,
+        'chair': 9,
+        'bookcase': 10,
+        'sofa': 11,
+        'board': 12,
+        'clutter': 13,
+        'stairs': 0,
+        }.get(object_class, 0)
+    return object_label
+
+#------------------------------------------------------------------------------
+def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver_batch):
+    """read the format of semantic3d.
+    ver_batch : if ver_batch>0 then load the file ver_batch lines at a time.
+                useful for huge files (> 5millions lines)
+    voxel_width: if voxel_width>0, voxelize data with a regular grid
+    n_class : the number of class; if 0 won't search for labels (test set)
+    implements batch-loading for huge files
+    and pruning"""
+
+    xyz = np.zeros((0, 3), dtype='float32')
+    rgb = np.zeros((0, 3), dtype='uint8')
+    labels = np.zeros((0, n_class+1), dtype='uint32')
+    #---the clouds can potentially be too big to parse directly---
+    #---th
