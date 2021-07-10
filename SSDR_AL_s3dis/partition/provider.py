@@ -123,4 +123,45 @@ def scalar2ply(filename, xyz, scalar):
 #------------------------------------------------------------------------------
 def get_color_from_label(object_label, dataset):
     """associate the color corresponding to the class"""
- 
+    if dataset == 's3dis': #S3DIS
+        object_label = {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 233, 229, 107], #'ceiling' .-> .yellow
+            2: [  95, 156, 196], #'floor' .-> . blue
+            3: [ 179, 116,  81], #'wall'  ->  brown
+            4: [  81, 163, 148], #'column'  ->  bluegreen
+            5: [ 241, 149, 131], #'beam'  ->  salmon
+            6: [  77, 174,  84], #'window'  ->  bright green
+            7: [ 108, 135,  75], #'door'   ->  dark green
+            8: [  79,  79,  76], #'table'  ->  dark grey
+            9: [  41,  49, 101], #'chair'  ->  darkblue
+            10: [223,  52,  52], #'bookcase'  ->  red
+            11: [ 89,  47,  95], #'sofa'  ->  purple
+            12: [ 81, 109, 114], #'board'   ->  grey
+            13: [233, 233, 229], #'clutter'  ->  light grey
+            }.get(object_label, -1)
+    elif (dataset == 'sema3d'): #Semantic3D
+        object_label =  {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 200, 200, 200], #'man-made terrain'  ->  grey
+            2: [   0,  70,   0], #'natural terrain'  ->  dark green
+            3: [   0, 255,   0], #'high vegetation'  ->  bright green
+            4: [ 255, 255,   0], #'low vegetation'  ->  yellow
+            5: [ 255,   0,   0], #'building'  ->  red
+            6: [ 148,   0, 211], #'hard scape'  ->  violet
+            7: [   0, 255, 255], #'artifact'   ->  cyan
+            8: [ 255,   8, 127], #'cars'  ->  pink
+            }.get(object_label, -1)
+    elif (dataset == 'vkitti'): #vkitti3D
+        object_label =  {
+            0:  [   0,   0,   0], # None-> black
+            1:  [ 200,  90,   0], # Terrain .->.brown
+            2:  [   0, 128,  50], # Tree  -> dark green
+            3:  [   0, 220,   0], # Vegetation-> bright green
+            4:  [ 255,   0,   0], # Building-> red
+            5:  [ 100, 100, 100] , # Road-> dark gray
+            6:  [ 200, 200, 200], # GuardRail-> bright gray
+            7:  [ 255,   0, 255], # TrafficSign-> pink
+            8:  [ 255, 255,   0], # TrafficLight-> yellow
+            9:  [ 128,   0, 255], # Pole-> violet
+            10:  [ 255, 200, 1
