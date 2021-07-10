@@ -164,4 +164,46 @@ def get_color_from_label(object_label, dataset):
             7:  [ 255,   0, 255], # TrafficSign-> pink
             8:  [ 255, 255,   0], # TrafficLight-> yellow
             9:  [ 128,   0, 255], # Pole-> violet
-            10:  [ 255, 200, 1
+            10:  [ 255, 200, 150], # Misc-> skin
+            11: [   0, 128, 255], # Truck-> dark blue
+            12: [   0, 200, 255], # Car-> bright blue
+            13: [ 255, 128,   0], # Van-> orange
+            }.get(object_label, -1)
+    elif (dataset == 'custom_dataset'): #Custom set
+        object_label =  {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 255, 0, 0], #'classe A' -> red
+            2: [ 0, 255, 0], #'classeB' -> green
+            }.get(object_label, -1)
+    else:
+        raise ValueError('Unknown dataset: %s' % (dataset))
+    if object_label == -1:
+        raise ValueError('Type not recognized: %s' % (object_label))
+    return object_label
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def read_s3dis_format(raw_path, label_out=True):
+#S3DIS specific
+    """extract data from a room folder"""
+    #room_ver = genfromtxt(raw_path, delimiter=' ')
+    room_ver = pd.read_csv(raw_path, sep=' ', header=None).values
+    xyz = np.ascontiguousarray(room_ver[:, 0:3], dtype='float32')
+    try:
+        rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype='uint8')
+    except ValueError:
+        rgb = np.zeros((room_ver.shape[0],3), dtype='uint8')
+        print('WARN - corrupted rgb data for file %s' % raw_path)
+    if not label_out:
+        return xyz, rgb
+    n_ver = len(room_ver)
+    del room_ver
+    nn = NearestNeighbors(1, algorithm='kd_tree').fit(xyz)
+    room_labels = np.zeros((n_ver,), dtype='uint8')
+    room_object_indices = np.zeros((n_ver,), dtype='uint32')
+    objects = glob.glob(os.path.dirname(raw_path) + "/Annotations/*.txt")
+    i_object = 1
+    for single_object in objects:
+        object_name = os.path.splitext(os.path.basename(single_object))[0]
+        print("        adding object " + str(i_object) + " : "  + object_name)
+        object_class = object_name.split('_')[0]
+        object_label =
