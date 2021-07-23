@@ -387,4 +387,54 @@ def read_las(filename):
 def write_ply_obj(filename, xyz, rgb, labels, object_indices):
     """write into a ply file. include the label and the object number"""
     prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1')
-            , ('green', 'u1'), ('blue', 'u1'), ('label', 'u1
+            , ('green', 'u1'), ('blue', 'u1'), ('label', 'u1')
+            , ('object_index', 'uint32')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+    vertex_all[prop[6][0]] = labels
+    vertex_all[prop[7][0]] = object_indices
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+
+#------------------------------------------------------------------------------
+def embedding2ply(filename, xyz, embeddings):
+    """write a ply with colors corresponding to geometric features"""
+
+    if embeddings.shape[1]>3:
+        pca = PCA(n_components=3)
+        #pca.fit(np.eye(embeddings.shape[1]))
+        pca.fit(np.vstack((np.zeros((embeddings.shape[1],)),np.eye(embeddings.shape[1]))))
+        embeddings = pca.transform(embeddings)
+
+    #value = (embeddings-embeddings.mean(axis=0))/(2*embeddings.std())+0.5
+    #value = np.minimum(np.maximum(value,0),1)
+    #value = (embeddings)/(3 * embeddings.std())+0.5
+    value = np.minimum(np.maximum((embeddings+1)/2,0),1)
+
+
+    color = np.array(255 * value, dtype='uint8')
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = xyz[:, i]
+    for i in range(0, 3):
+        vertex_all[prop[i+3][0]] = color[:, i]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+
+    ply.write(filename)
+
+#------------------------------------------------------------------------------
+def edge_class2ply2(filename, edg_class, xyz, edg_source, edg_target):
+    """write a ply with edge weight color coded into the midway point"""
+
+    n_edg = len(edg_target)
+
+    midpoint = (xyz[edg_source,]+xyz[edg_target,])/2
+
+    color = np.zeros((edg_source.shape[0],3), dtype = 'uint8')
+    color[edg_class==0,] = [0,0,0]
+    color[(edg_class==1).nonzero(),] = [255,0,0]
+    c
