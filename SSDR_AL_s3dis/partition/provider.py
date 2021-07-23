@@ -346,4 +346,45 @@ def read_semantic3d_format2(data_file, n_class, file_label_path, voxel_width, ve
         del vertices
         if n_class > 0:
             #labels_full = pd.read_csv(file_label_path, dtype="u1"
-            #   
+            #             , nrows=ver_batch, header=head).values.squeeze()
+            labels_full = np.genfromtxt(file_label_path, dtype="u1", delimiter=' '
+                            , max_rows=ver_batch, skip_header=i_rows)
+
+        if voxel_width > 0:
+            if n_class > 0:
+                xyz_sub, rgb_sub, labels_sub, objets_sub = libply_c.prune(xyz_full, voxel_width
+                                             , rgb_full, labels_full , np.zeros(1, dtype='uint8'), n_class, 0)
+                labels = np.vstack((labels, labels_sub))
+            else:
+                xyz_sub, rgb_sub, l, o = libply_c.prune(xyz_full, voxel_width
+                                    , rgb_full, np.zeros(1, dtype='uint8'), np.zeros(1, dtype='uint8'), 0,0)
+            del xyz_full, rgb_full
+            xyz = np.vstack((xyz, xyz_sub))
+            rgb = np.vstack((rgb, rgb_sub))
+        i_rows = i_rows + ver_batch
+    print("Reading done")
+    if n_class>0:
+        return xyz, rgb, labels
+    else:
+        return xyz, rgb
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+def read_las(filename):
+    """convert from a las file with no rgb"""
+    #---read the ply file--------
+    try:
+        inFile = laspy.file.File(filename, mode='r')
+    except NameError:
+        raise ValueError("laspy package not found. uncomment import in /partition/provider and make sure it is installed in your environment")
+    N_points = len(inFile)
+    x = np.reshape(inFile.x, (N_points,1))
+    y = np.reshape(inFile.y, (N_points,1))
+    z = np.reshape(inFile.z, (N_points,1))
+    xyz = np.hstack((x,y,z)).astype('f4')
+    return xyz
+#------------------------------------------------------------------------------
+def write_ply_obj(filename, xyz, rgb, labels, object_indices):
+    """write into a ply file. include the label and the object number"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1')
+            , ('green', 'u1'), ('blue', 'u1'), ('label', 'u1
