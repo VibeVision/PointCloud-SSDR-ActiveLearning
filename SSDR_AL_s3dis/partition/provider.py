@@ -480,4 +480,50 @@ def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
     """write the geometric features, labels and clouds in a h5 file"""
     if os.path.isfile(file_name):
         os.remove(file_name)
-    data_file = h5py.Fil
+    data_file = h5py.File(file_name, 'w')
+    data_file.create_dataset('geof', data=geof, dtype='float32')
+    data_file.create_dataset('source', data=graph_nn["source"], dtype='uint32')
+    data_file.create_dataset('target', data=graph_nn["target"], dtype='uint32')
+    data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
+    data_file.create_dataset('xyz', data=xyz, dtype='float32')
+    if len(rgb) > 0:
+        data_file.create_dataset('rgb', data=rgb, dtype='uint8')
+    if len(labels) > 0 and len(labels.shape)>1 and labels.shape[1]>1:
+        data_file.create_dataset('labels', data=labels, dtype='uint32')
+    else:
+        data_file.create_dataset('labels', data=labels, dtype='uint8')
+    data_file.close()
+#------------------------------------------------------------------------------
+def read_features(file_name):
+    """read the geometric features, clouds and labels from a h5 file"""
+    data_file = h5py.File(file_name, 'r')
+    #fist get the number of vertices
+    n_ver = len(data_file["geof"][:, 0])
+    has_labels = len(data_file["labels"])
+    #the labels can be empty in the case of a test set
+    if has_labels:
+        labels = np.array(data_file["labels"])
+    else:
+        labels = []
+    #---fill the arrays---
+    geof = data_file["geof"][:]
+    xyz = data_file["xyz"][:]
+    rgb = data_file["rgb"][:]
+    source = data_file["source"][:]
+    target = data_file["target"][:]
+
+    #---set the graph---
+    graph_nn = dict([("is_nn", True)])
+    graph_nn["source"] = source
+    graph_nn["target"] = target
+    return geof, xyz, rgb, graph_nn, labels
+#------------------------------------------------------------------------------
+def write_spg(file_name, graph_sp, components, in_component):
+    """save the partition and spg information"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    data_file = h5py.File(file_name, 'w')
+    grp = data_file.create_group('components')
+    n_com = len(components)
+    for i_com in range(0, n_com):
+        grp.create_dataset(str(i_c
