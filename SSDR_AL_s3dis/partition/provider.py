@@ -559,4 +559,33 @@ def write_spg(file_name, graph_sp, components, in_component):
                              , data=graph_sp["se_surface_ratio"], dtype='float32')
     data_file.create_dataset('se_volume_ratio'
                              , data=graph_sp["se_volume_ratio"], dtype='float32')
-    data_file.create_da
+    data_file.create_dataset('se_point_count_ratio'
+                             , data=graph_sp["se_point_count_ratio"], dtype='float32')
+#-----------------------------------------------------------------------------
+def read_spg(file_name):
+    """read the partition and spg information"""
+    data_file = h5py.File(file_name, 'r')
+    graph = dict([("is_nn", False)])
+    graph["source"] = np.array(data_file["source"], dtype='uint32')
+    graph["target"] = np.array(data_file["target"], dtype='uint32')
+    graph["sp_centroids"] = np.array(data_file["sp_centroids"], dtype='float32')
+    graph["sp_length"] = np.array(data_file["sp_length"], dtype='float32')
+    graph["sp_surface"] = np.array(data_file["sp_surface"], dtype='float32')
+    graph["sp_volume"] = np.array(data_file["sp_volume"], dtype='float32')
+    graph["sp_point_count"] = np.array(data_file["sp_point_count"], dtype='uint64')
+    graph["se_delta_mean"] = np.array(data_file["se_delta_mean"], dtype='float32')
+    graph["se_delta_std"] = np.array(data_file["se_delta_std"], dtype='float32')
+    graph["se_delta_norm"] = np.array(data_file["se_delta_norm"], dtype='float32')
+    graph["se_delta_centroid"] = np.array(data_file["se_delta_centroid"], dtype='float32')
+    graph["se_length_ratio"] = np.array(data_file["se_length_ratio"], dtype='float32')
+    graph["se_surface_ratio"] = np.array(data_file["se_surface_ratio"], dtype='float32')
+    graph["se_volume_ratio"] = np.array(data_file["se_volume_ratio"], dtype='float32')
+    graph["se_point_count_ratio"] = np.array(data_file["se_point_count_ratio"], dtype='float32')
+    in_component = np.array(data_file["in_component"], dtype='uint32')
+    n_com = len(graph["sp_length"])
+    graph["sp_labels"] = np.array(data_file["sp_labels"], dtype='uint32')
+    grp = data_file['components']
+    components = np.empty((n_com,), dtype=object)
+    for i_com in range(0, n_com):
+        components[i_com] = np.array(grp[str(i_com)], dtype='uint32').tolist()
+    return graph, comp
