@@ -526,4 +526,37 @@ def write_spg(file_name, graph_sp, components, in_component):
     grp = data_file.create_group('components')
     n_com = len(components)
     for i_com in range(0, n_com):
-        grp.create_dataset(str(i_c
+        grp.create_dataset(str(i_com), data=components[i_com], dtype='uint32')
+    data_file.create_dataset('in_component'
+                             , data=in_component, dtype='uint32')
+    data_file.create_dataset('sp_labels'
+                             , data=graph_sp["sp_labels"], dtype='uint32')
+    data_file.create_dataset('sp_centroids'
+                             , data=graph_sp["sp_centroids"], dtype='float32')
+    data_file.create_dataset('sp_length'
+                             , data=graph_sp["sp_length"], dtype='float32')
+    data_file.create_dataset('sp_surface'
+                             , data=graph_sp["sp_surface"], dtype='float32')
+    data_file.create_dataset('sp_volume'
+                             , data=graph_sp["sp_volume"], dtype='float32')
+    data_file.create_dataset('sp_point_count'
+                             , data=graph_sp["sp_point_count"], dtype='uint64')
+    data_file.create_dataset('source'
+                             , data=graph_sp["source"], dtype='uint32')
+    data_file.create_dataset('target'
+                             , data=graph_sp["target"], dtype='uint32')
+    data_file.create_dataset('se_delta_mean'
+                             , data=graph_sp["se_delta_mean"], dtype='float32')
+    data_file.create_dataset('se_delta_std'
+                             , data=graph_sp["se_delta_std"], dtype='float32')
+    data_file.create_dataset('se_delta_norm'
+                             , data=graph_sp["se_delta_norm"], dtype='float32')
+    data_file.create_dataset('se_delta_centroid'
+                             , data=graph_sp["se_delta_centroid"], dtype='float32')
+    data_file.create_dataset('se_length_ratio'
+                             , data=graph_sp["se_length_ratio"], dtype='float32')
+    data_file.create_dataset('se_surface_ratio'
+                             , data=graph_sp["se_surface_ratio"], dtype='float32')
+    data_file.create_dataset('se_volume_ratio'
+                             , data=graph_sp["se_volume_ratio"], dtype='float32')
+    data_file.create_da
