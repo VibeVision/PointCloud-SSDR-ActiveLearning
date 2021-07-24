@@ -437,4 +437,47 @@ def edge_class2ply2(filename, edg_class, xyz, edg_source, edg_target):
     color = np.zeros((edg_source.shape[0],3), dtype = 'uint8')
     color[edg_class==0,] = [0,0,0]
     color[(edg_class==1).nonzero(),] = [255,0,0]
-    c
+    color[(edg_class==2).nonzero(),] = [125,255,0]
+    color[(edg_class==3).nonzero(),] = [0,125,255]
+
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(n_edg, dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = np.hstack(midpoint[:, i])
+    for i in range(3, 6):
+        vertex_all[prop[i][0]] = color[:,i-3]
+
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+
+    ply.write(filename)
+
+#------------------------------------------------------------------------------
+def write_ply_labels(filename, xyz, rgb, labels):
+    """write into a ply file. include the label"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1')
+            , ('blue', 'u1'), ('label', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+    vertex_all[prop[6][0]] = labels
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def write_ply(filename, xyz, rgb):
+    """write into a ply file"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
+    """write the geometric features, labels and clouds in a h5 file"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    data_file = h5py.Fil
