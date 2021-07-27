@@ -672,4 +672,17 @@ def write_gt_connected_components(file_name, components, in_component):
         os.remove(file_name)
     data_file = h5py.File(file_name, 'w')
     grp = data_file.create_group('components')
-    for i_com in ran
+    for i_com in range(len(components)):
+        grp.create_dataset(str(i_com), data=components[i_com], dtype='uint32')
+    data_file.create_dataset('in_component', data=in_component, dtype='uint32')
+#-------------------------------------
+
+def read_gt_connected_components(file_name):
+    """read the label-based connected components of the ground truth"""
+    data_file = h5py.File(file_name, 'r')
+    in_component = np.array(data_file["in_component"], dtype='uint32')
+    n_com = np.amax(in_component)
+    components = np.empty((n_com,), dtype=object)
+    for i_com in range(0, n_com):
+        components[i_com] = np.array(grp[str(i_com)], dtype='uint32').tolist()
+    return components, in_component
