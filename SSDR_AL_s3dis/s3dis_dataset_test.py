@@ -69,4 +69,46 @@ class S3DIS_Dataset_Test:
                 self.input_trees += [search_tree]
                 self.input_colors += [sub_colors]
                 self.input_labels += [sub_labels]
-  
+                self.input_names += [cloud_name]
+
+                proj_file = join(tree_path, '{:s}_proj.pkl'.format(cloud_name))
+                with open(proj_file, 'rb') as f:
+                    proj_idx, labels = pickle.load(f)
+                self.val_proj += [proj_idx]
+                self.val_labels += [labels]
+
+                size = sub_colors.shape[0] * 4 * 7
+                print('{:s} {:.1f} MB loaded in {:.1f}s'.format(kd_tree_file.split('/')[-1], size * 1e-6, time.time() - t0))
+
+        print('\nPreparing reprojected indices for testing')
+
+    def init_possibility(self):
+        self.current_batch = 0
+        self.possibility = []
+        self.min_possibility = []
+        # Random initialize
+        for i, tree in enumerate(self.input_colors):
+            self.possibility += [np.random.rand(tree.data.shape[0]) * 1e-3]
+            self.min_possibility += [float(np.min(self.possibility[-1]))]
+
+    def reset_current_batch(self):
+        self.current_batch = 0
+
+    def get_batch(self):
+        self.current_batch = self.current_batch + 1
+        if self.current_batch > ConfigS3DIS.val_steps:
+            return []
+        else:
+            batch_xyz, batch_features, batch_labels, batch_pc_idx, batch_cloud_idx = [], [], [], [], []
+            # Generator loop
+            for i in range(ConfigS3DIS.val_batch_size):
+                # Choose the cloud with the lowest probability
+                cloud_idx = int(np.argmin(np.asarray(self.min_possibility)))
+                # choose the point with the minimum of possibility in the cloud as query point
+                point_ind = np.argmin(self.possibility[cloud_idx])
+                # Get all points within the cloud from tree structure
+                points = np.array(self.input_trees[cloud_idx].data, copy=False)
+                # Center point of input region
+                center_point = points[point_ind, :].reshape(1, -1)
+                # Add noise to the center point
+                noise = np.random.normal(scale=ConfigS3DIS.noise_init
