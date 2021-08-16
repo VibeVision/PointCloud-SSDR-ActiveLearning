@@ -111,4 +111,35 @@ class S3DIS_Dataset_Test:
                 # Center point of input region
                 center_point = points[point_ind, :].reshape(1, -1)
                 # Add noise to the center point
-                noise = np.random.normal(scale=ConfigS3DIS.noise_init
+                noise = np.random.normal(scale=ConfigS3DIS.noise_init / 10, size=center_point.shape)
+                pick_point = center_point + noise.astype(center_point.dtype)
+                # Check if the number of points in the selected cloud is less than the predefined num_points
+                if len(points) < ConfigS3DIS.num_points:
+                    # Query all points within the cloud
+                    queried_idx = self.input_trees[cloud_idx].query(pick_point, k=len(points))[1][0]
+                else:
+                    # Query the predefined number of points
+                    queried_idx = self.input_trees[cloud_idx].query(pick_point, k=ConfigS3DIS.num_points)[1][0]
+
+                # Shuffle index
+                queried_idx = DP.shuffle_idx(queried_idx)
+                # Get corresponding points and colors based on the index
+                queried_pc_xyz = points[queried_idx]
+                queried_pc_xyz = queried_pc_xyz - pick_point
+                queried_pc_colors = self.input_colors[cloud_idx][queried_idx]
+                queried_pc_labels = self.input_labels[cloud_idx][queried_idx]
+                # Update the possibility of the selected points
+                dists = np.sum(np.square((points[queried_idx] - pick_point).astype(np.float32)), axis=1)  # shape=[queried_number]
+                delta = np.square(1 - dists / np.max(dists))
+                self.possibility[cloud_idx][queried_idx] += delta
+                self.min_possibility[cloud_idx] = float(np.min(self.possibility[cloud_idx]))
+                # up_sampled with replacement
+                if len(points) < ConfigS3DIS.num_points:
+                    queried_pc_xyz, queried_pc_colors, queried_idx, queried_pc_labels, queried_pc_activation, queried_pc_pseudo = \
+                            DP.data_aug(queried_pc_xyz, queried_pc_colors, queried_pc_labels,
+                                        np.zeros([len(queried_pc_labels)]), np.zeros([len(queried_pc_labels)]),
+                                        queried_idx, ConfigS3DIS.num_points)
+
+                batch_xyz.append(queried_pc_xyz.astype(np.float32))
+                batch_features.append(queried_pc_colors.astype(np.float32))
+            
