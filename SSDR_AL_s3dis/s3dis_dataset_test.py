@@ -142,4 +142,37 @@ class S3DIS_Dataset_Test:
 
                 batch_xyz.append(queried_pc_xyz.astype(np.float32))
                 batch_features.append(queried_pc_colors.astype(np.float32))
-            
+                batch_labels.append(queried_pc_labels)
+                batch_pc_idx.append(queried_idx.astype(np.int32))
+                batch_cloud_idx.append(cloud_idx)
+
+
+            return self.tf_map(np.asarray(batch_xyz), np.asarray(batch_features), np.asarray(batch_labels),
+                               np.asarray(batch_pc_idx, dtype=np.int32), np.asarray(batch_cloud_idx, dtype=np.int32))
+
+    def tf_map(self, batch_xyz, batch_features, batch_labels, batch_pc_idx, batch_cloud_idx):
+
+        # print(batch_xyz.shape, batch_features.shape)
+        batch_features = np.concatenate([batch_xyz, batch_features], axis=-1)
+        input_points = []
+        input_neighbors = []
+        input_pools = []
+        input_up_samples = []
+
+        for i in range(ConfigS3DIS.num_layers):
+            neighbour_idx = DP.knn_search(batch_xyz, batch_xyz, ConfigS3DIS.k_n)
+            sub_points = batch_xyz[:, :np.shape(batch_xyz)[1] // ConfigS3DIS.sub_sampling_ratio[i], :]
+            pool_i = neighbour_idx[:, :np.shape(batch_xyz)[1] // ConfigS3DIS.sub_sampling_ratio[i], :]
+            up_i = DP.knn_search(sub_points, batch_xyz, 1)
+
+            input_points.append(batch_xyz)
+            input_neighbors.append(neighbour_idx)
+            input_pools.append(pool_i)
+            input_up_samples.append(up_i)
+
+            batch_xyz = sub_points
+
+        input_list = input_points + input_neighbors + input_pools + input_up_samples  # shape[0] = 5+5+5+5
+        input_list += [batch_features, batch_labels, batch_pc_idx, batch_cloud_idx]  # shape[0] = 20+4
+
+        return input_list
