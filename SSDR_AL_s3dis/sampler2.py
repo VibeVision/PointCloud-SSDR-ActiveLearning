@@ -476,3 +476,336 @@ class RandomSampler:
 
         for i in range(length):
             if each_file_number[i] > 0:
+                cloud_name = cloud_name_list[i]
+                if len(total_obj["unlabeled"][cloud_name]) >= each_file_number[i]:
+                    superpoint_inds = np.random.choice(list(total_obj["unlabeled"][cloud_name]), int(each_file_number[i]), replace=False).tolist()
+                    _help(input_path=self.input_path, data_path=self.data_path, total_obj=total_obj, current_path=current_path, cloud_name=cloud_name,
+                               superpoint_inds=superpoint_inds, w=w, sampler_args=self.sampler_args, prob_class=None, threshold=threshold, budget=budget, min_size=self.min_size)
+                else:
+                    superpoint_inds = total_obj["unlabeled"][cloud_name]
+                    _help(input_path=self.input_path, data_path=self.data_path, total_obj=total_obj, current_path=current_path, cloud_name=cloud_name,
+                               superpoint_inds=superpoint_inds, w=w, sampler_args=self.sampler_args, prob_class=None, threshold=threshold, budget=budget, min_size=self.min_size)
+
+        if budget["click"] == 0 or len(total_obj["unlabeled"]) == 0:
+            # save total_obj
+            with open(os.path.join(current_path, "total.pkl"), "wb") as f:
+                pickle.dump(total_obj, f)
+        else:
+            return self._iteration(current_path, total_obj, w, threshold, budget)
+
+    def sampling(self, model, batch_size, last_round, w, threshold, gcn_gpu, gcn_number, gcn_top):
+        budget = {}
+        budget["click"] = batch_size
+
+        if last_round == 1:
+            current_path = os.path.join(self.data_path, "sampling", "seed", "round_1")
+        else:
+            current_path = os.path.join(self.data_path, "sampling", get_sampler_args_str(self.sampler_args), "round_" + str(last_round))
+
+        round_num = last_round+1
+        next_round_path = os.path.join(self.data_path, "sampling", get_sampler_args_str(self.sampler_args), "round_" + str(round_num))
+        os.makedirs(next_round_path) if not os.path.exists(next_round_path) else None
+        # copy content to next round
+        list1 = os.listdir(current_path)
+        for file1 in list1:
+            p = os.path.join(current_path, file1)
+            if os.path.isfile(p) and ".superpoint" not in file1:
+                shutil.copyfile(p, os.path.join(next_round_path, file1))
+
+        # read total_obj
+        with open(os.path.join(next_round_path, "total.pkl"), "rb") as f:
+            total_obj = pickle.load(f)
+            if "selected_class_list" not in total_obj:
+                total_obj["selected_class_list"] = []
+
+        self._iteration(current_path=next_round_path, total_obj=total_obj, w=w, threshold=threshold, budget=budget)
+
+class TSampler:
+    def __init__(self, input_path, data_path, total_num, test_area_idx, sampler_args, reg_strength, min_size, dataset_name):
+        self.input_path = input_path
+        self.data_path = data_path
+        self.total_num = total_num
+        self.test_area_idx = test_area_idx
+        self.sampler_args = sampler_args
+        self.reg_strength = reg_strength
+        self.min_size = min_size
+        self.dataset_name = dataset_name
+
+    def create_file_top_and_all(self, region_reference, sorted_inds, batch_size):
+        file_list_top = {}
+        file_list_all = {}
+        for i in range(len(sorted_inds)):
+            idx = sorted_inds[i]
+            cloud_name, sp_idx, dominant_point_ids = region_reference[idx]["cloud_name"], region_reference[idx]["sp_idx"], region_reference[idx]["dominant_point_ids"]
+            if i < batch_size:
+                if cloud_name not in file_list_top:
+                    file_list_top[cloud_name] = {}
+                    file_list_top[cloud_name]["sp_idx_list"] = []
+                file_list_top[cloud_name][sp_idx] = dominant_point_ids
+                file_list_top[cloud_name]["sp_idx_list"].append(sp_idx)
+
+            if cloud_name not in file_list_all:
+                file_list_all[cloud_name] = {}
+                file_list_all[cloud_name]["sp_idx_list"] = []
+            file_list_all[cloud_name][sp_idx] = dominant_point_ids
+            file_list_all[cloud_name]["sp_idx_list"].append(sp_idx)
+
+        return file_list_top, file_list_all
+
+    def create_sp_inds_with_position(self, file_list_top, file_list_all, cloud_name):
+
+        selected_num = len(file_list_top[cloud_name]["sp_idx_list"])
+        candicate_sp_inds = np.asarray(file_list_all[cloud_name]["sp_idx_list"][:2 * selected_num])
+        with open(join(self.data_path, "superpoint",
+                       cloud_name + ".superpoint"), "rb") as f:
+            sp = pickle.load(f)
+        components = sp["components"]
+        data = read_ply(
+            join(self.input_path, '{:s}.ply'.format(cloud_name)))
+        xyz = np.vstack((data['x'], data['y'], data['z'])).T  #
+        candicate_superpoints = []
+        candicate_superpoints_centroid = []
+        for si in range(len(candicate_sp_inds)):
+            sp_idx = candicate_sp_inds[si]
+            x_y_z = xyz[components[sp_idx]]
+            center_x = (np.min(x_y_z[:, 0]) + np.max(x_y_z[:, 0]))/2.0
+            center_y = (np.min(x_y_z[:, 1]) + np.max(x_y_z[:, 1])) / 2.0
+            center_z = (np.min(x_y_z[:, 2]) + np.max(x_y_z[:, 2])) / 2.0
+            candicate_superpoints_centroid.append(np.asarray([center_x, center_y, center_z]))
+            candicate_superpoints.append(x_y_z)
+        candicate_superpoints_centroid = np.asarray(candicate_superpoints_centroid)
+
+        selected_ids = farthest_superpoint_sample(candicate_superpoints, candicate_superpoints_centroid, selected_num, 0)
+        return candicate_sp_inds[selected_ids]
+
+    def prediction(self, model, total_obj, round_num):
+        region_uncertainty = []
+        region_class = []
+
+        unlabeled_region_reference = []  # ele {cloud_name:, sp_idx:, dominant_point_ids: }
+        labeled_region_reference_dict = {}  # {cloud_name: [sp_idx]}
+
+        prob_class_dict = {}
+
+        if self.dataset_name == "S3DIS":
+            sample_data = S3DIS_Dataset(test_area_idx=self.test_area_idx, sampler_args=self.sampler_args,
+                                        round_num=round_num, mode="sampling", reg_strength=self.reg_strength)
+
+        sample_loader = DataLoader(sample_data, batch_size=1, shuffle=False, num_workers=6)
+
+        class_num = None
+        for i, dat in enumerate(sample_loader):
+
+            prob_logits, cloud_idns, point_idx = model.sess.run([model.prob_logits, model.input_cloud_inds, model.input_input_inds], feed_dict=model.get_feed_dict(dat, False))
+            prob_logits = prob_logits[np.argsort(point_idx[0])]
+
+            class_num = prob_logits.shape[-1]
+            prob_class = np.argmax(prob_logits, axis=-1)  # [batch_size * point_num]
+            pixel_uncertainty = compute_point_uncertainty(prob_logits=prob_logits, sampler_args=self.sampler_args)
+            cloud_idx = cloud_idns[0]
+            cloud_name = sample_data.input_cloud_names[cloud_idx]
+            prob_class_dict[cloud_name] = prob_class
+
+            with open(join(self.data_path, "superpoint", cloud_name + ".superpoint"), "rb") as f:
+                sp = pickle.load(f)
+            components = sp["components"]
+
+            for sp_idx in range(len(components)):
+                point_ids = components[sp_idx]
+                if cloud_name in total_obj["unlabeled"] and sp_idx in total_obj["unlabeled"][cloud_name]:
+
+                    if len(point_ids) >= self.min_size:
+
+                        region_uncertainty.append(
+                                compute_region_uncertainty(pixel_uncertainty=pixel_uncertainty[point_ids],
+                                                           pixel_class=prob_class[point_ids],
+                                                           class_num=class_num, sampler_args=self.sampler_args))
+                        _, idns = _dominant_2(prob_class[point_ids])
+                        dominant_point_ids = np.array(point_ids)[idns]
+                        unlabeled_region_reference.append({"cloud_name": cloud_name, "sp_idx": sp_idx, "dominant_point_ids": dominant_point_ids})
+                        do_label, _ = _dominant_label(prob_class[point_ids])
+                        region_class.append(do_label)
+                else:
+                    if len(point_ids) >= self.min_size:
+                        if cloud_name not in labeled_region_reference_dict:
+                            labeled_region_reference_dict[cloud_name] = []
+                        labeled_region_reference_dict[cloud_name].append(sp_idx)
+
+        print("\n############\n compute uncertaintly successfully \n###############\n")
+        if "classbal" in self.sampler_args:
+            region_uncertainty = add_classbal(class_num=class_num, region_class=region_class, region_uncertainty=region_uncertainty)
+        elif "clsbal" in self.sampler_args:
+            region_uncertainty = add_clsbal(class_num=class_num, region_class=region_class,
+                                              region_uncertainty=region_uncertainty, total_obj=total_obj)
+
+        sorted_inds = np.argsort(-np.asarray(region_uncertainty))  # 降序
+        print("\n############\n compute class balance successfully \n###############\n")
+        return unlabeled_region_reference, sorted_inds, prob_class_dict, labeled_region_reference_dict, class_num
+
+    def sampling(self, model, batch_size, last_round, w, threshold, gcn_gpu, gcn_number, gcn_top):
+        budget = {}
+        budget["click"] = batch_size
+
+        if last_round == 1:
+            current_path = os.path.join(self.data_path, "sampling", "seed", "round_1")
+        else:
+            current_path = os.path.join(self.data_path, "sampling", get_sampler_args_str(self.sampler_args), "round_" + str(last_round))
+
+        round_num = last_round+1
+        next_round_path = os.path.join(self.data_path, "sampling", get_sampler_args_str(self.sampler_args), "round_" + str(round_num))
+        os.makedirs(next_round_path) if not os.path.exists(next_round_path) else None
+        # copy content to next round
+        list1 = os.listdir(current_path)
+        for file1 in list1:
+            p = os.path.join(current_path, file1)
+            if os.path.isfile(p) and ".superpoint" not in file1:
+                shutil.copyfile(p, os.path.join(next_round_path, file1))
+
+        # read total_obj
+        with open(os.path.join(next_round_path, "total.pkl"), "rb") as f:
+            total_obj = pickle.load(f)
+            if "selected_class_list" not in total_obj:
+                total_obj["selected_class_list"] = []
+
+        region_reference, sorted_inds, prob_class_dict, labeled_region_reference_dict, class_num = self.prediction(model=model, total_obj=total_obj, round_num=round_num)
+        if "edcd" in self.sampler_args:
+            if batch_size > len(region_reference):
+                batch_size = len(region_reference)
+            file_list_top, file_list_all = self.create_file_top_and_all(region_reference=region_reference, sorted_inds=sorted_inds, batch_size=batch_size)
+            w["before_gcn_file_num"] = len(file_list_top)
+            # oracle
+            for cloud_name in file_list_top:
+                begin_time = time.time()
+                superpoint_idns = self.create_sp_inds_with_position(file_list_top=file_list_top,
+                                                                    file_list_all=file_list_all,
+                                                                    cloud_name=cloud_name)
+                print("create_sp_inds_with_position. class_name= " + cloud_name + ", cost_time=", time.time() - begin_time)
+                _help(input_path=self.input_path, data_path=self.data_path, total_obj=total_obj, current_path=next_round_path, cloud_name=cloud_name,
+                      superpoint_inds=superpoint_idns, w=w, sampler_args=self.sampler_args, prob_class=prob_class_dict[cloud_name],
+                      threshold=threshold, budget=budget, min_size=self.min_size)
+            print("\n############\n compute distance successfully \n###############\n")
+
+        elif "gcn" in self.sampler_args:
+            if batch_size > len(region_reference):
+                batch_size = len(region_reference)
+            file_list_top, file_list_all = self.create_file_top_and_all(region_reference=region_reference,
+                                                                        sorted_inds=sorted_inds, batch_size=batch_size)
+            w["before_gcn_file_num"] = len(file_list_top)
+            labeled_select_regions, _ = get_labeled_selection_cloudname_spidx_pointidx(input_path=self.input_path, data_path=self.data_path,
+                                                                                       labeled_region_reference_dict=labeled_region_reference_dict,
+                                                                                       class_num=class_num, round_num=round_num)
+
+            unlabeled_candidate_regions = {}
+            sampling_batch = 0
+            for cloud_name in file_list_top:
+                unlabeled_candidate_regions[cloud_name] = {}
+                selected_num = len(file_list_top[cloud_name]["sp_idx_list"])
+                sampling_batch = sampling_batch + selected_num
+                candicate_sp_inds = file_list_all[cloud_name]["sp_idx_list"][:2 * selected_num]
+                for sp_idx in candicate_sp_inds:
+                    unlabeled_candidate_regions[cloud_name][sp_idx] = file_list_all[cloud_name][sp_idx]
+
+            labeled_select_features, labeled_select_ref, unlabeled_candidate_features, unlabeled_candidate_ref = compute_features(dataset_name=self.dataset_name, test_area_idx=self.test_area_idx, sampler_args=self.sampler_args,
+                                                                                                              round_num=round_num, reg_strength=self.reg_strength, model=model,
+                                                                                                              labeled_select_regions=labeled_select_regions, unlabeled_candidate_regions=unlabeled_candidate_regions)
+
+            print("\n############\n compute gcn features V successfully \n###############\n")
+
+            file_list = GCN_sampling(labeled_select_features=labeled_select_features, labeled_select_ref=labeled_select_ref,
+                                          unlabeled_candidate_features=unlabeled_candidate_features, unlabeled_candidate_ref=unlabeled_candidate_ref,
+                                          input_path=self.input_path, data_path=self.data_path,
+                                          sampling_batch=sampling_batch, gcn_gpu=gcn_gpu)
+
+            w["gcn_file_num"] = len(file_list)
+            w["gcn_sp_num"] = 0
+            w["gcn_unlabel_num"] = 0
+            for cloud_name in file_list:
+                w["gcn_sp_num"] += len(file_list[cloud_name])
+                for spid in file_list[cloud_name]:
+                    if cloud_name in total_obj["unlabeled"] and spid in total_obj["unlabeled"][cloud_name]:
+                        w["gcn_unlabel_num"] += 1
+
+            print("\n############\n compute gcn total successfully \n###############\n")
+            # oracle
+            for cloud_name in file_list:
+                _help(input_path=self.input_path, data_path=self.data_path, total_obj=total_obj,
+                      current_path=next_round_path, cloud_name=cloud_name,
+                      superpoint_inds=file_list[cloud_name], w=w, sampler_args=self.sampler_args,
+                      prob_class=prob_class_dict[cloud_name],
+                      threshold=threshold, budget=budget, min_size=self.min_size)
+
+        elif "gcn_fps" in self.sampler_args:
+            if batch_size > len(region_reference):
+                batch_size = len(region_reference)
+            file_list_top, file_list_all = self.create_file_top_and_all(region_reference=region_reference,
+                                                                        sorted_inds=sorted_inds, batch_size=batch_size)
+            w["before_gcn_file_num"] = len(file_list_top)
+            labeled_select_regions, _ = get_labeled_selection_cloudname_spidx_pointidx(input_path=self.input_path, data_path=self.data_path,
+                                                                                       labeled_region_reference_dict=labeled_region_reference_dict,
+                                                                                       class_num=class_num, round_num=round_num)
+            unlabeled_candidate_regions = {}
+            sampling_batch = 0
+            for cloud_name in file_list_top:
+                unlabeled_candidate_regions[cloud_name] = {}
+                selected_num = len(file_list_top[cloud_name]["sp_idx_list"])
+                sampling_batch = sampling_batch + selected_num
+                candicate_sp_inds = file_list_all[cloud_name]["sp_idx_list"][:2 * selected_num]
+                for sp_idx in candicate_sp_inds:
+                    unlabeled_candidate_regions[cloud_name][sp_idx] = file_list_all[cloud_name][sp_idx]
+
+            labeled_select_features, labeled_select_ref, unlabeled_candidate_features, unlabeled_candidate_ref = compute_features(dataset_name=self.dataset_name, test_area_idx=self.test_area_idx, sampler_args=self.sampler_args,
+                                                                                                              round_num=round_num, reg_strength=self.reg_strength, model=model,
+                                                                                                              labeled_select_regions=labeled_select_regions, unlabeled_candidate_regions=unlabeled_candidate_regions)
+
+            print("\n############\n compute gcn features V successfully \n###############\n")
+
+            file_list = GCN_FPS_sampling(labeled_select_features=labeled_select_features, labeled_select_ref=labeled_select_ref, unlabeled_candidate_features=unlabeled_candidate_features, unlabeled_candidate_ref=unlabeled_candidate_ref,
+                                          input_path=self.input_path, data_path=self.data_path,
+                                          sampling_batch=sampling_batch, gcn_number=gcn_number, gcn_top=gcn_top)
+
+            w["gcn_file_num"] = len(file_list)
+            w["gcn_sp_num"] = 0
+            w["gcn_unlabel_num"] = 0
+            for cloud_name in file_list:
+                w["gcn_sp_num"] += len(file_list[cloud_name])
+                for spid in file_list[cloud_name]:
+                    if cloud_name in total_obj["unlabeled"] and spid in total_obj["unlabeled"][cloud_name]:
+                        w["gcn_unlabel_num"] += 1
+
+            print("\n############\n compute gcn total successfully \n###############\n")
+            # oracle
+            for cloud_name in file_list:
+                _help(input_path=self.input_path, data_path=self.data_path, total_obj=total_obj,
+                      current_path=next_round_path, cloud_name=cloud_name,
+                      superpoint_inds=file_list[cloud_name], w=w, sampler_args=self.sampler_args,
+                      prob_class=prob_class_dict[cloud_name],
+                      threshold=threshold, budget=budget, min_size=self.min_size)
+
+        else:
+            if batch_size > len(region_reference):
+                batch_size = len(region_reference)
+            file_list = {}
+            for i in sorted_inds[:batch_size]:
+                cloud_name, sp_idx = region_reference[i]["cloud_name"], region_reference[i]["sp_idx"]
+                if cloud_name not in file_list:
+                    file_list[cloud_name] = []
+                file_list[cloud_name].append(sp_idx)
+
+            w["gcn_file_num"] = len(file_list)
+            w["gcn_sp_num"] = 0
+            w["gcn_unlabel_num"] = 0
+            for cloud_name in file_list:
+                w["gcn_sp_num"] += len(file_list[cloud_name])
+                for spid in file_list[cloud_name]:
+                    if cloud_name in total_obj["unlabeled"] and spid in total_obj["unlabeled"][cloud_name]:
+                        w["gcn_unlabel_num"] += 1
+
+            # oracle
+            for cloud_name in file_list:
+                _help(input_path=self.input_path, data_path=self.data_path, total_obj=total_obj, current_path=next_round_path, cloud_name=cloud_name,
+                      superpoint_inds=file_list[cloud_name], w=w, sampler_args=self.sampler_args, prob_class=prob_class_dict[cloud_name],
+                      threshold=threshold, budget=budget, min_size=self.min_size)
+
+        # save total_obj
+        with open(os.path.join(next_round_path, "total.pkl"), "wb") as f:
+            pickle.dump(total_obj, f)
