@@ -31,4 +31,29 @@ if __name__ == '__main__':
         input_  = "input_0.040"
         cfg = ConfigS3DIS
 
-    round_result_file = open(os.path.join("record_round", dataset_name + "_" + str(test_area_idx) + "_" + get_sampler_args_str(sampler_args) + "_" + str(reg_streng
+    round_result_file = open(os.path.join("record_round", dataset_name + "_" + str(test_area_idx) + "_" + get_sampler_args_str(sampler_args) + "_" + str(reg_strength) + '.txt'), 'a')
+
+    with open(os.path.join("data", dataset_name, str(reg_strength), "superpoint/total.pkl"), "rb") as f:
+        total_obj = pickle.load(f)
+    total_sp_num = total_obj["sp_num"]
+
+    print("total_sp_num", total_sp_num)
+    Sampler = SeedSampler("data/" +dataset_name + "/" + input_, "data/" + dataset_name + "/" + str(reg_strength), total_sp_num, sampler_args)
+
+    w = {"sp_num": 0, "p_num": 0, "p_num_list": [], "sp_id_list": [], "sub_num": 0, "sub_p_num": 0}
+    sp_batch_size = int(total_sp_num * seed_percent)
+    Sampler.sampling(None, sp_batch_size, last_round=round_num - 1, w=w)
+    labeling_region_num = w["sp_num"] + w["sub_num"]
+    labeling_point_num = w["p_num"] + w["sub_p_num"]
+    log_out("round= " + str(round_num) + " |                    labeling_region_num=" + str(
+            labeling_region_num) + ", labeling_point_num=" +
+                str(labeling_point_num) + ", mean_points=" + str(labeling_point_num / labeling_region_num),
+                round_result_file)
+
+    model = Network(cfg, dataset_name, sampler_args, test_area_idx, reg_strength=reg_strength)
+    best_miou, best_OA = model.train(round_num=round_num)
+
+    log_out("round= " + str(round_num) + " | best_miou= " + str(best_miou) + ", best_OA= " + str(best_OA), round_result_file)
+
+    model.close()
+    round_result_file.close()
