@@ -52,4 +52,9 @@ if __name__ == '__main__':
                 round_result_file)
 
     model = Network(cfg, dataset_name, sampler_args, test_area_idx, reg_strength=reg_strength)
-    best_miou, best_OA = model.train(round_num=
+    best_miou, best_OA = model.train(round_num=round_num)
+
+    log_out("round= " + str(round_num) + " | best_miou= " + str(best_miou) + ", best_OA= " + str(best_OA), round_result_file)
+
+    model.close()
+    round_result_file.close()
