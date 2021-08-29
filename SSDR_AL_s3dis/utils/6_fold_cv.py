@@ -46,4 +46,24 @@ if __name__ == '__main__':
             gt_l = int(labels[j])
             pred_l = int(pred[j])
             gt_classes[gt_l] += 1.0
-            posi
+            positive_classes[pred_l] += 1.0
+            true_positive_classes[gt_l] += int(gt_l == pred_l)
+
+    iou_list = []
+    for n in range(13):
+        mu = float(gt_classes[n] + positive_classes[n] - true_positive_classes[n])
+        if mu == 0.0:
+            mu = 1.0
+        iou = true_positive_classes[n] / mu
+        iou_list.append(iou)
+    mean_iou = sum(iou_list) / 13.0
+    print('eval accuracy: {}'.format(test_total_correct / float(test_total_seen)))
+    print('mean IOU:{}'.format(mean_iou))
+    print(iou_list)
+
+    acc_list = []
+    for n in range(13):
+        acc = true_positive_classes[n] / float(gt_classes[n])
+        acc_list.append(acc)
+    mean_acc = sum(acc_list) / 13.0
+    print('mAcc value is :{}'.format(mean_acc))
