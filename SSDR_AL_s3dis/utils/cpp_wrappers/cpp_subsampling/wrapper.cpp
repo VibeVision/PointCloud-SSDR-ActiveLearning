@@ -177,4 +177,70 @@ static PyObject *grid_subsampling_compute(PyObject *self, PyObject *args, PyObje
 		Py_XDECREF(points_array);
 		Py_XDECREF(classes_array);
 		Py_XDECREF(features_array);
-		PyErr_SetString(Py
+		PyErr_SetString(PyExc_RuntimeError, "Wrong dimensions : features.shape is not (N, d)");
+		return NULL;
+	}
+	if (use_classes && (int)PyArray_DIM(classes_array, 0) != N)
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Wrong dimensions : classes.shape is not (N,) or (N, d)");
+		return NULL;
+	}
+
+
+    // Call the C++ function
+    // *********************
+
+    // Create pyramid
+    if (verbose > 0)
+        cout << "Computing cloud pyramid with support points: " << endl;
+
+
+    // Convert PyArray to Cloud C++ class
+	vector<PointXYZ> original_points;
+	vector<float> original_features;
+	vector<int> original_classes;
+	original_points = vector<PointXYZ>((PointXYZ*)PyArray_DATA(points_array), (PointXYZ*)PyArray_DATA(points_array) + N);
+	if (use_feature)
+		original_features = vector<float>((float*)PyArray_DATA(features_array), (float*)PyArray_DATA(features_array) + N*fdim);
+	if (use_classes)
+		original_classes = vector<int>((int*)PyArray_DATA(classes_array), (int*)PyArray_DATA(classes_array) + N*ldim);
+
+    // Subsample
+	vector<PointXYZ> subsampled_points;
+	vector<float> subsampled_features;
+	vector<int> subsampled_classes;
+	grid_subsampling(original_points,
+                     subsampled_points,
+                     original_features,
+                     subsampled_features,
+                     original_classes,
+                     subsampled_classes,
+                     sampleDl,
+                     verbose);
+
+    // Check result
+	if (subsampled_points.size() < 1)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Error");
+        return NULL;
+    }
+
+    // Manage outputs
+    // **************
+
+	// Dimension of input containers
+	npy_intp* point_dims = new npy_intp[2];
+	point_dims[0] = subsampled_points.size();
+	point_dims[1] = 3;
+	npy_intp* feature_dims = new npy_intp[2];
+	feature_dims[0] = subsampled_points.size();
+	feature_dims[1] = fdim;
+	npy_intp* classes_dims = new npy_intp[2];
+	classes_dims[0] = subsampled_points.size();
+	classes_dims[1] = ldim;
+
+    // Create output array
+	PyO
