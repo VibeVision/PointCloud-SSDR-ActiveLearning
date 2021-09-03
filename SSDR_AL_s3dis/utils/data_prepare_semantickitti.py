@@ -74,4 +74,5 @@ for seq_id in seq_list:
             np.save(join(pc_path_out, scan_id)[:-4], sub_points)
             with open(KDTree_save, 'wb') as f:
                 pickle.dump(search_tree, f)
-       
+            with open(proj_save, 'wb') as f:
+                pickle.dump([proj_inds], f)
