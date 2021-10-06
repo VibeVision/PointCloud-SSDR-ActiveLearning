@@ -1582,3 +1582,306 @@ namespace nanoflann
 					if(treeIndex[index] == -1)
 						continue;
 					DistanceType dist = distance.evalMetric(vec, index, (DIM > 0 ? DIM : BaseClassRef::dim));
+					if (dist<worst_dist) {
+						result_set.addPoint(dist, BaseClassRef::vind[i]);
+					}
+				}
+				return;
+			}
+
+			/* Which child branch should be taken first? */
+			int idx = node->node_type.sub.divfeat;
+			ElementType val = vec[idx];
+			DistanceType diff1 = val - node->node_type.sub.divlow;
+			DistanceType diff2 = val - node->node_type.sub.divhigh;
+
+			NodePtr bestChild;
+			NodePtr otherChild;
+			DistanceType cut_dist;
+			if ((diff1 + diff2) < 0) {
+				bestChild = node->child1;
+				otherChild = node->child2;
+				cut_dist = distance.accum_dist(val, node->node_type.sub.divhigh, idx);
+			}
+			else {
+				bestChild = node->child2;
+				otherChild = node->child1;
+				cut_dist = distance.accum_dist( val, node->node_type.sub.divlow, idx);
+			}
+
+			/* Call recursively to search next level down. */
+			searchLevel(result_set, vec, bestChild, mindistsq, dists, epsError);
+
+			DistanceType dst = dists[idx];
+			mindistsq = mindistsq + cut_dist - dst;
+			dists[idx] = cut_dist;
+			if (mindistsq*epsError <= result_set.worstDist()) {
+				searchLevel(result_set, vec, otherChild, mindistsq, dists, epsError);
+			}
+			dists[idx] = dst;
+		}
+
+	public:
+		/**  Stores the index in a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so when loading the index object it must be constructed associated to the same source of data points used while building it.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void saveIndex(FILE* stream)
+		{
+			this->saveIndex_(*this, stream);
+		}
+
+		/**  Loads a previous index from a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so the index object must be constructed associated to the same source of data points used while building the index.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void loadIndex(FILE* stream)
+		{
+			this->loadIndex_(*this, stream);
+		}
+
+	};
+
+
+	/** kd-tree dynaimic index
+	 *
+	 * class to create multiple static index and merge their results to behave as single dynamic index as proposed in Logarithmic Approach.
+	 *  
+	 *  Example of usage:
+	 *  examples/dynamic_pointcloud_example.cpp
+	 *
+	 * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
+	 * \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc.
+	 * \tparam DIM Dimensionality of data points (e.g. 3 for 3D points)
+	 * \tparam IndexType Will be typically size_t or int
+	 */
+	template <typename Distance, class DatasetAdaptor,int DIM = -1, typename IndexType = size_t>
+	class KDTreeSingleIndexDynamicAdaptor
+	{
+	public:
+		typedef typename Distance::ElementType  ElementType;
+		typedef typename Distance::DistanceType DistanceType;
+	protected:
+
+		size_t m_leaf_max_size;
+		size_t treeCount;
+		size_t pointCount;
+
+		/**
+		 * The dataset used by this index
+		 */
+		const DatasetAdaptor &dataset; //!< The source of our data
+
+		std::vector<int> treeIndex; //!< treeIndex[idx] is the index of tree in which point at idx is stored. treeIndex[idx]=-1 means that point has been removed.
+
+		KDTreeSingleIndexAdaptorParams index_params;
+
+		int dim;  //!< Dimensionality of each data point
+
+		typedef KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM> index_container_t;
+		std::vector<index_container_t> index;
+
+	public:
+		/** Get a const ref to the internal list of indices; the number of indices is adapted dynamically as 
+		  * the dataset grows in size. */
+		const std::vector<index_container_t> & getAllIndices() const {
+			return index;
+		}
+
+	private:
+		/** finds position of least significant unset bit */
+		int First0Bit(IndexType num)
+		{
+			int pos = 0;
+			while(num&1)
+			{
+				num = num>>1;
+				pos++;
+			}
+			return pos;
+		}
+
+		/** Creates multiple empty trees to handle dynamic support */
+		void init()
+		{
+			typedef KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM> my_kd_tree_t;
+			std::vector<my_kd_tree_t> index_(treeCount, my_kd_tree_t(dim /*dim*/, dataset, treeIndex, index_params));
+			index=index_;
+		}
+
+	public:
+
+		Distance distance;
+
+
+		KDTreeSingleIndexDynamicAdaptor(const int dimensionality, const DatasetAdaptor& inputData, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams() , const size_t maximumPointCount = 1000000000U) :
+			dataset(inputData), index_params(params), distance(inputData)
+		{
+			treeCount = std::log2(maximumPointCount);
+			pointCount = 0U;
+			dim = dimensionality;
+			treeIndex.clear();
+			if (DIM > 0) dim = DIM;
+			m_leaf_max_size = params.leaf_max_size;
+			init();
+			int num_initial_points = dataset.kdtree_get_point_count();
+			if (num_initial_points > 0) {
+				addPoints(0, num_initial_points - 1);
+			}
+		}
+
+		/** Deleted copy constructor*/
+		KDTreeSingleIndexDynamicAdaptor(const KDTreeSingleIndexDynamicAdaptor<Distance, DatasetAdaptor, DIM, IndexType>&) = delete;
+
+
+		/** Add points to the set, Inserts all points from [start, end] */
+		void addPoints(IndexType start, IndexType end)
+		{
+			int count = end - start + 1;
+			treeIndex.resize(treeIndex.size() + count);
+			for(IndexType idx = start; idx <= end; idx++) {
+				int pos = First0Bit(pointCount);
+				index[pos].vind.clear();
+				treeIndex[pointCount]=pos;
+				for(int i = 0; i < pos; i++) {
+					for(int j = 0; j < static_cast<int>(index[i].vind.size()); j++) {
+						index[pos].vind.push_back(index[i].vind[j]);
+						treeIndex[index[i].vind[j]] = pos;
+					}
+					index[i].vind.clear();
+					index[i].freeIndex(index[i]);
+				}
+				index[pos].vind.push_back(idx);
+				index[pos].buildIndex();
+				pointCount++;
+			}
+		}
+
+		/** Remove a point from the set (Lazy Deletion) */
+		void removePoint(size_t idx)
+		{
+			if(idx >= pointCount)
+				return;
+			treeIndex[idx] = -1;
+		}
+
+		/**
+		 * Find set of nearest neighbors to vec[0:dim-1]. Their indices are stored inside
+		 * the result object.
+		 *
+		 * Params:
+		 *     result = the result object in which the indices of the nearest-neighbors are stored
+		 *     vec = the vector for which to search the nearest neighbors
+		 *
+		 * \tparam RESULTSET Should be any ResultSet<DistanceType>
+         * \return  True if the requested neighbors could be found.
+		 * \sa knnSearch, radiusSearch
+		 */
+		template <typename RESULTSET>
+		bool findNeighbors(RESULTSET& result, const ElementType* vec, const SearchParams& searchParams) const
+		{
+			for(size_t i = 0; i < treeCount; i++)
+			{
+				index[i].findNeighbors(result, &vec[0], searchParams);
+			}
+			return result.full();
+		}
+
+	}; 
+
+	/** An L2-metric KD-tree adaptor for working with data directly stored in an Eigen Matrix, without duplicating the data storage.
+	  *  Each row in the matrix represents a point in the state space.
+	  *
+	  *  Example of usage:
+	  * \code
+	  * 	Eigen::Matrix<num_t,Dynamic,Dynamic>  mat;
+	  * 	// Fill out "mat"...
+	  *
+	  * 	typedef KDTreeEigenMatrixAdaptor< Eigen::Matrix<num_t,Dynamic,Dynamic> >  my_kd_tree_t;
+	  * 	const int max_leaf = 10;
+	  * 	my_kd_tree_t   mat_index(mat, max_leaf );
+	  * 	mat_index.index->buildIndex();
+	  * 	mat_index.index->...
+	  * \endcode
+	  *
+	  *  \tparam DIM If set to >0, it specifies a compile-time fixed dimensionality for the points in the data set, allowing more compiler optimizations.
+	  *  \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc.
+	  */
+	template <class MatrixType, class Distance = nanoflann::metric_L2>
+	struct KDTreeEigenMatrixAdaptor
+	{
+		typedef KDTreeEigenMatrixAdaptor<MatrixType,Distance> self_t;
+		typedef typename MatrixType::Scalar              num_t;
+		typedef typename MatrixType::Index IndexType;
+		typedef typename Distance::template traits<num_t,self_t>::distance_t metric_t;
+		typedef KDTreeSingleIndexAdaptor< metric_t,self_t, MatrixType::ColsAtCompileTime,IndexType>  index_t;
+
+		index_t* index; //! The kd-tree index for the user to call its methods as usual with any other FLANN index.
+
+		/// Constructor: takes a const ref to the matrix object with the data points
+		KDTreeEigenMatrixAdaptor(const MatrixType &mat, const int leaf_max_size = 10) : m_data_matrix(mat)
+		{
+			const IndexType dims = mat.cols();
+			index = new index_t( dims, *this /* adaptor */, nanoflann::KDTreeSingleIndexAdaptorParams(leaf_max_size ) );
+			index->buildIndex();
+		}
+	public:
+		/** Deleted copy constructor */
+		KDTreeEigenMatrixAdaptor(const self_t&) = delete;
+
+		~KDTreeEigenMatrixAdaptor() {
+			delete index;
+		}
+
+		const MatrixType &m_data_matrix;
+
+		/** Query for the \a num_closest closest points to a given point (entered as query_point[0:dim-1]).
+		  *  Note that this is a short-cut method for index->findNeighbors().
+		  *  The user can also call index->... methods as desired.
+		  * \note nChecks_IGNORED is ignored but kept for compatibility with the original FLANN interface.
+		  */
+		inline void query(const num_t *query_point, const size_t num_closest, IndexType *out_indices, num_t *out_distances_sq, const int /* nChecks_IGNORED */ = 10) const
+		{
+			nanoflann::KNNResultSet<num_t, IndexType> resultSet(num_closest);
+			resultSet.init(out_indices, out_distances_sq);
+			index->findNeighbors(resultSet, query_point, nanoflann::SearchParams());
+		}
+
+		/** @name Interface expected by KDTreeSingleIndexAdaptor
+		  * @{ */
+
+		const self_t & derived() const {
+			return *this;
+		}
+		self_t & derived()       {
+			return *this;
+		}
+
+		// Must return the number of data points
+		inline size_t kdtree_get_point_count() const {
+			return m_data_matrix.rows();
+		}
+
+		// Returns the dim'th component of the idx'th point in the class:
+		inline num_t kdtree_get_pt(const IndexType idx, int dim) const {
+			return m_data_matrix.coeff(idx, IndexType(dim));
+		}
+
+		// Optional bounding-box computation: return false to default to a standard bbox computation loop.
+		//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+		//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+		template <class BBOX>
+		bool kdtree_get_bbox(BBOX& /*bb*/) const {
+			return false;
+		}
+
+		/** @} */
+
+	}; // end of KDTreeEigenMatrixAdaptor
+	/** @} */
+
+/** @} */ // end of grouping
+} // end of NS
+
+
+#endif /* NANOFLANN_HPP_ */
