@@ -130,4 +130,63 @@ learning_map:
   70: 15    # "vegetation"
   71: 16    # "trunk"
   72: 17    # "terrain"
-  80: 18    
+  80: 18    # "pole"
+  81: 19    # "traffic-sign"
+  99: 0     # "other-object" to "unlabeled" ----------------------------mapped
+  252: 1    # "moving-car" to "car" ------------------------------------mapped
+  253: 7    # "moving-bicyclist" to "bicyclist" ------------------------mapped
+  254: 6    # "moving-person" to "person" ------------------------------mapped
+  255: 8    # "moving-motorcyclist" to "motorcyclist" ------------------mapped
+  256: 5    # "moving-on-rails" mapped to "other-vehicle" --------------mapped
+  257: 5    # "moving-bus" mapped to "other-vehicle" -------------------mapped
+  258: 4    # "moving-truck" to "truck" --------------------------------mapped
+  259: 5    # "moving-other"-vehicle to "other-vehicle" ----------------mapped
+learning_map_inv: # inverse of previous map
+  0: 0      # "unlabeled", and others ignored
+  1: 10     # "car"
+  2: 11     # "bicycle"
+  3: 15     # "motorcycle"
+  4: 18     # "truck"
+  5: 20     # "other-vehicle"
+  6: 30     # "person"
+  7: 31     # "bicyclist"
+  8: 32     # "motorcyclist"
+  9: 40     # "road"
+  10: 44    # "parking"
+  11: 48    # "sidewalk"
+  12: 49    # "other-ground"
+  13: 50    # "building"
+  14: 51    # "fence"
+  15: 70    # "vegetation"
+  16: 71    # "trunk"
+  17: 72    # "terrain"
+  18: 80    # "pole"
+  19: 81    # "traffic-sign"
+learning_ignore: # Ignore classes
+  0: True      # "unlabeled", and others ignored
+  1: False     # "car"
+  2: False     # "bicycle"
+  3: False     # "motorcycle"
+  4: False     # "truck"
+  5: False     # "other-vehicle"
+  6: False     # "person"
+  7: False     # "bicyclist"
+  8: False     # "motorcyclist"
+  9: False     # "road"
+  10: False    # "parking"
+  11: False    # "sidewalk"
+  12: False    # "other-ground"
+  13: False    # "building"
+  14: False    # "fence"
+  15: False    # "vegetation"
+  16: False    # "trunk"
+  17: False    # "terrain"
+  18: False    # "pole"
+  19: False    # "traffic-sign"
+split: # sequence numbers
+  train:
+    - 0
+    - 1
+    - 2
+    - 3
+    -
