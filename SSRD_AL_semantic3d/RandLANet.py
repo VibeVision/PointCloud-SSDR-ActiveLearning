@@ -315,3 +315,276 @@ class  Network:
 
                 log_out("Round " + str(round_num) + ' | epoch=' + str(self.training_epoch) + ", current m_iou=" + str(m_iou), self.Log_file)
                 if m_iou > best_miou:
+                    # Save the best model
+                    snapshot_directory = join(self.saving_path)
+                    makedirs(snapshot_directory) if not exists(snapshot_directory) else None
+                    self.saver.save(self.sess, join(self.saving_path, "snap"), global_step=round_num)
+                    early_count = 0
+                    best_miou = m_iou
+                    best_OA = OA
+
+                log_out("Round " + str(round_num) + ' | Best m_IoU is: {:5.3f}'.format(best_miou) +
+                        ', OA is: {:5.3f}'.format(best_OA) +
+                        " | val costTime=" + str(time.time() - tt12), self.Log_file)
+
+            log_out("Round " + str(round_num) + ' | ****EPOCH {}****'.format(self.training_epoch), self.Log_file)
+
+        return best_miou, best_OA
+
+    def close(self):
+        print('finished')
+        self.train_writer.close()
+        self.sess.close()
+        self.Log_file.close()
+
+    def evaluate_test_semantic3d(self, dataset, test_probs):
+        num_votes = 100
+        dataset.init_possibility()
+        # Smoothing parameter for votes
+        test_smooth = 0.98
+        val_proportions = np.zeros(self.config.num_classes, dtype=np.float32)
+        i = 0
+        for label_val in dataset.label_values:
+            if label_val not in dataset.ignored_labels:
+                val_proportions[i] = np.sum([np.sum(labels == label_val) for labels in dataset.val_labels])
+                i += 1
+
+        step_id = 0
+        epoch_id = 0
+        last_min = -0.5
+
+        while last_min < num_votes:
+            dat = dataset.get_batch()
+            while len(dat) > 0:
+                ops = (self.prob_logits,
+                       self.labels,
+                       self.input_input_inds,
+                       self.input_cloud_inds,
+                       )
+
+                stacked_probs, stacked_labels, point_idx, cloud_idx = self.sess.run(ops,
+                                                                                    feed_dict=self.get_feed_dict_test(
+                                                                                        dat))
+
+                correct = np.sum(np.argmax(stacked_probs, axis=1) == stacked_labels)
+                acc = correct / float(np.prod(np.shape(stacked_labels)))
+
+                stacked_probs = np.reshape(stacked_probs,
+                                           [self.config.val_batch_size, self.config.num_points,
+                                            self.config.num_classes])
+
+                for j in range(np.shape(stacked_probs)[0]):
+                    probs = stacked_probs[j, :, :]
+                    inds = point_idx[j, :]
+                    c_i = cloud_idx[j]
+                    test_probs[c_i][inds] = test_smooth * test_probs[c_i][inds] + (1 - test_smooth) * probs
+                step_id += 1
+
+                dat = dataset.get_batch()
+
+            dataset.reset_current_batch()
+            # Save predicted cloud
+            new_min = np.min(dataset.min_possibility)
+            # log_string('Epoch {:3d}, end. Min possibility = {:.1f}'.format(epoch_id, new_min), self.log_out)
+
+            test_probs_insert = test_probs
+
+            if last_min + 4 < new_min:
+                # Update last_min
+                last_min = new_min
+                confusion_list = []
+
+                num_val = len(dataset.input_labels)
+
+                for i_test in range(num_val):
+                    probs = test_probs_insert[i_test]
+                    preds = dataset.label_values[np.argmax(probs, axis=1)].astype(np.int32)
+                    labels = dataset.input_labels[i_test]
+
+                    if not self.config.ignored_label_inds or len(self.config.ignored_label_inds) == 0:
+                        pred_valid = preds
+                        labels_valid = labels
+                    else:
+
+                        invalid_idx = np.where(labels == self.config.ignored_label_inds)[0]
+                        labels_valid = np.delete(labels, invalid_idx)
+                        labels_valid = labels_valid - 1
+                        pred_valid = np.delete(preds, invalid_idx)
+
+
+                    confusion_list += [
+                        confusion_matrix(labels_valid, pred_valid, np.arange(0, ConfigSemantic3D.num_classes, 1))]
+
+                # Regroup confusions
+                C = np.sum(np.stack(confusion_list), axis=0).astype(np.float32)
+
+                # Rescale with the right number of point per class
+                C *= np.expand_dims(val_proportions / (np.sum(C, axis=1) + 1e-6), 1)
+
+                # Compute IoUs
+                IoUs = DP.IoU_from_confusions(C)
+                m_IoU = np.mean(IoUs)
+                s = '{:5.2f} | '.format(100 * m_IoU)
+                for IoU in IoUs:
+                    s += '{:5.2f} '.format(100 * IoU)
+                # log_out(s + '\n', self.Log_file)
+
+                if int(np.ceil(new_min)) % 1 == 0:
+
+                    # Project predictions
+                    proj_probs_list = []
+
+                    for i_val in range(num_val):
+                        # Reproject probs back to the evaluations points
+                        proj_idx = dataset.val_proj[i_val]
+                        probs = test_probs_insert[i_val][proj_idx, :]
+                        proj_probs_list += [probs]
+
+                    val_total_correct = 0
+                    val_total_seen = 0
+                    confusion_list = []
+                    for i_test in range(num_val):
+                        # Get the predicted labels
+                        preds = dataset.label_values[np.argmax(proj_probs_list[i_test], axis=1)].astype(np.uint8)
+                        labels = dataset.val_labels[i_test]
+
+                        if not self.config.ignored_label_inds or len(self.config.ignored_label_inds) == 0:
+                            pred_valid = preds
+                            labels_valid = labels
+                        else:
+
+                            invalid_idx = np.where(labels == self.config.ignored_label_inds)[0]
+                            labels_valid = np.delete(labels, invalid_idx)
+                            labels_valid = labels_valid - 1
+                            pred_valid = np.delete(preds, invalid_idx)
+
+
+
+                        correct = np.sum(pred_valid == labels_valid)
+                        val_total_correct += correct
+                        val_total_seen += len(labels_valid)
+
+                        confusion_list += [
+                            confusion_matrix(labels_valid, pred_valid, np.arange(0, ConfigSemantic3D.num_classes, 1))]
+
+                    # Regroup confusions
+                    C = np.sum(np.stack(confusion_list), axis=0)
+
+                    OA = val_total_correct / float(val_total_seen)
+                    IoUs = DP.IoU_from_confusions(C)
+                    m_IoU = np.mean(IoUs)
+                    s = '{:5.2f} | '.format(100 * m_IoU)
+                    for IoU in IoUs:
+                        s += '{:5.2f} '.format(100 * IoU)
+                    print('finished \n')
+                    return m_IoU, OA
+
+            epoch_id += 1
+            step_id = 0
+            continue
+
+        return m_IoU, 0
+
+    def get_loss(self, logits, labels, activation, pre_cal_weights):
+        # calculate the weighted cross entropy according to the inverse frequency
+        class_weights = tf.convert_to_tensor(pre_cal_weights, dtype=tf.float32)
+        one_hot_labels = tf.one_hot(labels, depth=self.config.num_classes)
+
+
+        self.ssdr_one_hot_labels = one_hot_labels
+        self.ssdr_logits = logits
+
+
+        unweighted_losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=one_hot_labels)
+
+        weights = tf.reduce_sum(class_weights * one_hot_labels, axis=1)
+
+        weighted_losses = unweighted_losses * weights
+        weighted_losses_acti = weighted_losses * tf.cast(activation, dtype=tf.float32)
+        output_loss = tf.reduce_mean(weighted_losses_acti)
+        return output_loss
+
+    def dilated_res_block(self, feature, xyz, neigh_idx, d_out, name, is_training):
+        f_pc = helper_tf_util.conv2d(feature, d_out // 2, [1, 1], name + 'mlp1', [1, 1], 'VALID', True, is_training)
+        f_pc = self.building_block(xyz, f_pc, neigh_idx, d_out, name + 'LFA', is_training)
+        f_pc = helper_tf_util.conv2d(f_pc, d_out * 2, [1, 1], name + 'mlp2', [1, 1], 'VALID', True, is_training,
+                                     activation_fn=None)
+        shortcut = helper_tf_util.conv2d(feature, d_out * 2, [1, 1], name + 'shortcut', [1, 1], 'VALID',
+                                         activation_fn=None, bn=True, is_training=is_training)
+        return tf.nn.leaky_relu(f_pc + shortcut)
+
+    def building_block(self, xyz, feature, neigh_idx, d_out, name, is_training):
+
+        d_in = feature.get_shape()[-1].value
+        f_xyz = self.relative_pos_encoding(xyz, neigh_idx)
+        f_xyz = helper_tf_util.conv2d(f_xyz, d_in, [1, 1], name + 'mlp1', [1, 1], 'VALID', True, is_training)
+        f_neighbours = self.gather_neighbour(tf.squeeze(feature, axis=2), neigh_idx)
+        f_concat = tf.concat([f_neighbours, f_xyz], axis=-1)
+        f_pc_agg = self.att_pooling(f_concat, d_out // 2, name + 'att_pooling_1', is_training)
+
+        f_xyz = helper_tf_util.conv2d(f_xyz, d_out // 2, [1, 1], name + 'mlp2', [1, 1], 'VALID', True, is_training)
+        f_neighbours = self.gather_neighbour(tf.squeeze(f_pc_agg, axis=2), neigh_idx)
+        f_concat = tf.concat([f_neighbours, f_xyz], axis=-1)
+        f_pc_agg = self.att_pooling(f_concat, d_out, name + 'att_pooling_2', is_training)
+        return f_pc_agg
+
+    def relative_pos_encoding(self, xyz, neigh_idx):
+        neighbor_xyz = self.gather_neighbour(xyz, neigh_idx)
+        xyz_tile = tf.tile(tf.expand_dims(xyz, axis=2), [1, 1, tf.shape(neigh_idx)[-1], 1])
+        relative_xyz = xyz_tile - neighbor_xyz
+        relative_dis = tf.sqrt(tf.reduce_sum(tf.square(relative_xyz), axis=-1, keepdims=True))
+        relative_feature = tf.concat([relative_dis, relative_xyz, xyz_tile, neighbor_xyz], axis=-1)
+        return relative_feature
+
+    @staticmethod
+    def random_sample(feature, pool_idx):
+
+        feature = tf.squeeze(feature, axis=2)
+        num_neigh = tf.shape(pool_idx)[-1]
+        d = feature.get_shape()[-1]
+        batch_size = tf.shape(pool_idx)[0]
+        pool_idx = tf.reshape(pool_idx, [batch_size, -1])
+        pool_features = tf.batch_gather(feature, pool_idx)
+        pool_features = tf.reshape(pool_features, [batch_size, -1, num_neigh, d])
+        pool_features = tf.reduce_max(pool_features, axis=2, keepdims=True)
+        return pool_features
+
+    @staticmethod
+    def nearest_interpolation(feature, interp_idx):
+
+        feature = tf.squeeze(feature, axis=2)
+        batch_size = tf.shape(interp_idx)[0]
+        up_num_points = tf.shape(interp_idx)[1]
+        interp_idx = tf.reshape(interp_idx, [batch_size, up_num_points])
+        interpolated_features = tf.batch_gather(feature, interp_idx)
+        interpolated_features = tf.expand_dims(interpolated_features, axis=2)
+        return interpolated_features
+
+    @staticmethod
+    def gather_neighbour(pc, neighbor_idx):
+        # gather the coordinates or features of neighboring points
+        batch_size = tf.shape(pc)[0]
+        num_points = tf.shape(pc)[1]
+        d = pc.get_shape()[2].value
+        index_input = tf.reshape(neighbor_idx, shape=[batch_size, -1])
+        features = tf.batch_gather(pc, index_input)
+        features = tf.reshape(features, [batch_size, num_points, tf.shape(neighbor_idx)[-1], d])
+        return features
+
+    @staticmethod
+    def att_pooling(feature_set, d_out, name, is_training):
+        batch_size = tf.shape(feature_set)[0]
+        num_points = tf.shape(feature_set)[1]
+        num_neigh = tf.shape(feature_set)[2]
+        d = feature_set.get_shape()[3].value
+        f_reshaped = tf.reshape(feature_set, shape=[-1, num_neigh, d])
+        att_activation = tf.layers.dense(f_reshaped, d, activation=None, use_bias=False, name=name + 'fc')
+        att_scores = tf.nn.softmax(att_activation, axis=1)
+        f_agg = f_reshaped * att_scores
+        f_agg = tf.reduce_sum(f_agg, axis=1)
+        f_agg = tf.reshape(f_agg, [batch_size, num_points, 1, d])
+        f_agg = helper_tf_util.conv2d(f_agg, d_out, [1, 1], name + 'mlp', [1, 1], 'VALID', True, is_training)
+        return f_agg
+
+if __name__=="__main__":
+    b = tf.ones()
