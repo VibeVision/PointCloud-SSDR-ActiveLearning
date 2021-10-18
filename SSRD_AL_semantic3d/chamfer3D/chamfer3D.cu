@@ -144,4 +144,48 @@ int chamfer_cuda_forward(at::Tensor xyz1, at::Tensor xyz2, at::Tensor dist1, at:
 
 	cudaError_t err = cudaGetLastError();
 	  if (err != cudaSuccess) {
-	    printf("error in nnd updateOutput: %s\n", cudaG
+	    printf("error in nnd updateOutput: %s\n", cudaGetErrorString(err));
+	    //THError("aborting");
+	    return 0;
+	  }
+	  return 1;
+
+
+}
+__global__ void NmDistanceGradKernel(int b,int n,const float * xyz1,int m,const float * xyz2,const float * grad_dist1,const int * idx1,float * grad_xyz1,float * grad_xyz2){
+	for (int i=blockIdx.x;i<b;i+=gridDim.x){
+		for (int j=threadIdx.x+blockIdx.y*blockDim.x;j<n;j+=blockDim.x*gridDim.y){
+			float x1=xyz1[(i*n+j)*3+0];
+			float y1=xyz1[(i*n+j)*3+1];
+			float z1=xyz1[(i*n+j)*3+2];
+			int j2=idx1[i*n+j];
+			float x2=xyz2[(i*m+j2)*3+0];
+			float y2=xyz2[(i*m+j2)*3+1];
+			float z2=xyz2[(i*m+j2)*3+2];
+			float g=grad_dist1[i*n+j]*2;
+			atomicAdd(&(grad_xyz1[(i*n+j)*3+0]),g*(x1-x2));
+			atomicAdd(&(grad_xyz1[(i*n+j)*3+1]),g*(y1-y2));
+			atomicAdd(&(grad_xyz1[(i*n+j)*3+2]),g*(z1-z2));
+			atomicAdd(&(grad_xyz2[(i*m+j2)*3+0]),-(g*(x1-x2)));
+			atomicAdd(&(grad_xyz2[(i*m+j2)*3+1]),-(g*(y1-y2)));
+			atomicAdd(&(grad_xyz2[(i*m+j2)*3+2]),-(g*(z1-z2)));
+		}
+	}
+}
+// int chamfer_cuda_backward(int b,int n,const float * xyz1,int m,const float * xyz2,const float * grad_dist1,const int * idx1,const float * grad_dist2,const int * idx2,float * grad_xyz1,float * grad_xyz2, cudaStream_t stream){
+int chamfer_cuda_backward(at::Tensor xyz1, at::Tensor xyz2, at::Tensor gradxyz1, at::Tensor gradxyz2, at::Tensor graddist1, at::Tensor graddist2, at::Tensor idx1, at::Tensor idx2){
+	// cudaMemset(grad_xyz1,0,b*n*3*4);
+	// cudaMemset(grad_xyz2,0,b*m*3*4);
+	
+	const auto batch_size = xyz1.size(0);
+	const auto n = xyz1.size(1); //num_points point cloud A
+	const auto m = xyz2.size(1); //num_points point cloud B
+
+	NmDistanceGradKernel<<<dim3(1,16,1),256>>>(batch_size,n,xyz1.data<float>(),m,xyz2.data<float>(),graddist1.data<float>(),idx1.data<int>(),gradxyz1.data<float>(),gradxyz2.data<float>());
+	NmDistanceGradKernel<<<dim3(1,16,1),256>>>(batch_size,m,xyz2.data<float>(),n,xyz1.data<float>(),graddist2.data<float>(),idx2.data<int>(),gradxyz2.data<float>(),gradxyz1.data<float>());
+	
+	cudaError_t err = cudaGetLastError();
+	  if (err != cudaSuccess) {
+	    printf("error in nnd get grad: %s\n", cudaGetErrorString(err));
+	    //THError("aborting");
+	  
