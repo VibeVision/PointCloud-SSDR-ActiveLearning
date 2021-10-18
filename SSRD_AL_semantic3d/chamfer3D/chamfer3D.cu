@@ -188,4 +188,9 @@ int chamfer_cuda_backward(at::Tensor xyz1, at::Tensor xyz2, at::Tensor gradxyz1,
 	  if (err != cudaSuccess) {
 	    printf("error in nnd get grad: %s\n", cudaGetErrorString(err));
 	    //THError("aborting");
-	  
+	    return 0;
+	  }
+	  return 1;
+	
+}
+
