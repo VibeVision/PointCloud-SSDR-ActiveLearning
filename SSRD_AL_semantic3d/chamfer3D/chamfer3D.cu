@@ -70,4 +70,78 @@ __global__ void NmDistanceKernel(int b,int n,const float * xyz,int m,const float
 						}
 					}
 				}else{
-					for (int k=0;k<end_ka;k
+					for (int k=0;k<end_ka;k+=4){
+						{
+							float x2=buf[k*3+0]-x1;
+							float y2=buf[k*3+1]-y1;
+							float z2=buf[k*3+2]-z1;
+							float d=x2*x2+y2*y2+z2*z2;
+							if (k==0 || d<best){
+								best=d;
+								best_i=k+k2;
+							}
+						}
+						{
+							float x2=buf[k*3+3]-x1;
+							float y2=buf[k*3+4]-y1;
+							float z2=buf[k*3+5]-z1;
+							float d=x2*x2+y2*y2+z2*z2;
+							if (d<best){
+								best=d;
+								best_i=k+k2+1;
+							}
+						}
+						{
+							float x2=buf[k*3+6]-x1;
+							float y2=buf[k*3+7]-y1;
+							float z2=buf[k*3+8]-z1;
+							float d=x2*x2+y2*y2+z2*z2;
+							if (d<best){
+								best=d;
+								best_i=k+k2+2;
+							}
+						}
+						{
+							float x2=buf[k*3+9]-x1;
+							float y2=buf[k*3+10]-y1;
+							float z2=buf[k*3+11]-z1;
+							float d=x2*x2+y2*y2+z2*z2;
+							if (d<best){
+								best=d;
+								best_i=k+k2+3;
+							}
+						}
+					}
+				}
+				for (int k=end_ka;k<end_k;k++){
+					float x2=buf[k*3+0]-x1;
+					float y2=buf[k*3+1]-y1;
+					float z2=buf[k*3+2]-z1;
+					float d=x2*x2+y2*y2+z2*z2;
+					if (k==0 || d<best){
+						best=d;
+						best_i=k+k2;
+					}
+				}
+				if (k2==0 || result[(i*n+j)]>best){
+					result[(i*n+j)]=best;
+					result_i[(i*n+j)]=best_i;
+				}
+			}
+			__syncthreads();
+		}
+	}
+}
+// int chamfer_cuda_forward(int b,int n,const float * xyz,int m,const float * xyz2,float * result,int * result_i,float * result2,int * result2_i, cudaStream_t stream){
+int chamfer_cuda_forward(at::Tensor xyz1, at::Tensor xyz2, at::Tensor dist1, at::Tensor dist2, at::Tensor idx1, at::Tensor idx2){
+
+	const auto batch_size = xyz1.size(0);
+	const auto n = xyz1.size(1); //num_points point cloud A
+	const auto m = xyz2.size(1); //num_points point cloud B
+
+	NmDistanceKernel<<<dim3(32,16,1),512>>>(batch_size, n, xyz1.data<float>(), m, xyz2.data<float>(), dist1.data<float>(), idx1.data<int>());
+	NmDistanceKernel<<<dim3(32,16,1),512>>>(batch_size, m, xyz2.data<float>(), n, xyz1.data<float>(), dist2.data<float>(), idx2.data<int>());
+
+	cudaError_t err = cudaGetLastError();
+	  if (err != cudaSuccess) {
+	    printf("error in nnd updateOutput: %s\n", cudaG
