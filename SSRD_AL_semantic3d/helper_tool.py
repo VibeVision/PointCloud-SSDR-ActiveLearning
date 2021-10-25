@@ -100,4 +100,51 @@ class DataProcessing:
     @staticmethod
     def load_label_semantic3d(filename):
         label_pd = pd.read_csv(filename, header=None, delim_whitespace=True, dtype=np.uint8)
-  
+        cloud_labels = label_pd.values
+        return cloud_labels
+
+    @staticmethod
+    def load_pc_kitti(pc_path):
+        scan = np.fromfile(pc_path, dtype=np.float32)
+        scan = scan.reshape((-1, 4))
+        points = scan[:, 0:3]  # get xyz
+        return points
+
+    @staticmethod
+    def load_label_kitti(label_path, remap_lut):
+        label = np.fromfile(label_path, dtype=np.uint32)
+        label = label.reshape((-1))
+        sem_label = label & 0xFFFF  # semantic label in lower half
+        inst_label = label >> 16  # instance id in upper half
+        assert ((sem_label + (inst_label << 16) == label).all())
+        sem_label = remap_lut[sem_label]
+        return sem_label.astype(np.int32)
+
+    @staticmethod
+    def get_file_list(dataset_path, test_scan_num):
+        seq_list = np.sort(os.listdir(dataset_path))
+
+        train_file_list = []
+        test_file_list = []
+        val_file_list = []
+        for seq_id in seq_list:
+            seq_path = join(dataset_path, seq_id)
+            pc_path = join(seq_path, 'velodyne')
+            if seq_id == '08':
+                val_file_list.append([join(pc_path, f) for f in np.sort(os.listdir(pc_path))])
+                if seq_id == test_scan_num:
+                    test_file_list.append([join(pc_path, f) for f in np.sort(os.listdir(pc_path))])
+            elif int(seq_id) >= 11 and seq_id == test_scan_num:
+                test_file_list.append([join(pc_path, f) for f in np.sort(os.listdir(pc_path))])
+            elif seq_id in ['00', '01', '02', '03', '04', '05', '06', '07', '09', '10']:
+                train_file_list.append([join(pc_path, f) for f in np.sort(os.listdir(pc_path))])
+
+        train_file_list = np.concatenate(train_file_list, axis=0)
+        val_file_list = np.concatenate(val_file_list, axis=0)
+        test_file_list = np.concatenate(test_file_list, axis=0)
+        return train_file_list, val_file_list, test_file_list
+
+    @staticmethod
+    def knn_search(support_pts, query_pts, k):
+        """
+        :para
