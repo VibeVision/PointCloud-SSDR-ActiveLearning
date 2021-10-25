@@ -183,4 +183,48 @@ def create_adj(featuresV, labeled_select_ref, unlabeled_candidate_ref, input_pat
         print("6")
 
     print("tensor", "1")
-    f
+    featuresV = torch.nn.functional.normalize(torch.Tensor(featuresV).cuda(device=gcn_gpu))
+    print("tensor", "2")
+    A_latent = torch.mm(featuresV, featuresV.t()).cuda(device=gcn_gpu)
+    print("tensor", "3")
+    adj = torch.multiply(A_latent, torch.exp(-torch.add(torch.Tensor(A_ed).cuda(device=gcn_gpu), torch.Tensor(A_cd).cuda(device=gcn_gpu))))
+    print("tensor", "4")
+    adj += -1.0 * torch.eye(adj.shape[0]).cuda(device=gcn_gpu)  # S-I
+    print("tensor", "5")
+    adj_diag = torch.sum(adj, dim=0).cuda(device=gcn_gpu)  # rowise sum
+    print("tensor", "6")
+    adj = torch.mm(adj, torch.diag(1 / adj_diag)).cuda(device=gcn_gpu)
+    print("tensor", "7")
+    adj = adj + torch.eye(adj.shape[0]).cuda(device=gcn_gpu)  #
+    print("tensor", "8")
+    return featuresV, adj, time.time() - begin_time
+
+def GCN_sampling(labeled_select_features, labeled_select_ref, unlabeled_candidate_features, unlabeled_candidate_ref, input_path, data_path, sampling_batch, gcn_gpu, coreGCN=True):
+    """
+        labeled(1),
+        unlabeled(0)
+    """
+    # torch.cuda.set_device()
+
+    featuresV = np.concatenate([unlabeled_candidate_features, labeled_select_features])
+    nfeat = featuresV.shape[1]
+    unlabeld_num = len(unlabeled_candidate_features)
+    labeled_num = len(labeled_select_features)
+    print("begin compute create_adj.")
+    featuresV, adj_tensor, cost_time = create_adj(featuresV, labeled_select_ref, unlabeled_candidate_ref, input_path, data_path, gcn_gpu=gcn_gpu)
+    print("\n############\n compute gcn adj successfully. CostTime = "+str(cost_time)+" s \n###############\n")
+
+    gcn_module = GCN(nfeat=nfeat,
+                     nhid=128,
+                     nclass=1,
+                     dropout=0.3,
+                     gcn_gpu=gcn_gpu).cuda(device=gcn_gpu)
+
+    optimizer = optim.Adam(gcn_module.parameters(), lr=1e-3, weight_decay=5e-4)
+
+    lbl = np.arange(unlabeld_num, unlabeld_num+labeled_num, 1)
+    nlbl = np.arange(0, unlabeld_num, 1)
+
+    ############
+    for bb in range(2000):
+  
