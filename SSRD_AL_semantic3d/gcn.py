@@ -142,4 +142,45 @@ def create_adj(featuresV, labeled_select_ref, unlabeled_candidate_ref, input_pat
         total_cloud[cloud_name].append({"sp_idx": sp_idx, "ref_idx": unlabeled_num+i})
 
     print("ed,cd below")
-    A_ed = np.ones([N, N], dtype=np.
+    A_ed = np.ones([N, N], dtype=np.float) * 1e10
+    A_cd = np.ones([N, N], dtype=np.float) * 1e10
+    cloud_name_list_len = len(cloud_name_list)
+    for i in range(cloud_name_list_len):
+        cloud_name = cloud_name_list[i]
+        with open(join(data_path, "superpoint",
+                       cloud_name + ".superpoint"), "rb") as f:
+            sp = pickle.load(f)
+        components = sp["components"]
+        data = read_ply(
+            join(input_path, '{:s}.ply'.format(cloud_name)))
+        xyz = np.vstack((data['x'], data['y'], data['z'])).T
+
+        source_ref_idx_list = []
+        one_cloud_candicate_superpoints = []
+        one_cloud_center_xyz = np.zeros([len(total_cloud[cloud_name]), 3])
+        one_cloud_center_xyz_len = len(one_cloud_center_xyz)
+        for j in range(one_cloud_center_xyz_len):
+            print(cloud_name_list_len, i, "f1", one_cloud_center_xyz_len, j)
+            source_sp_idx = total_cloud[cloud_name][j]["sp_idx"]
+            source_ref_idx_list.append(total_cloud[cloud_name][j]["ref_idx"])
+
+            x_y_z = xyz[components[source_sp_idx]]
+            one_cloud_center_xyz[j, 0] = (np.min(x_y_z[:, 0]) + np.max(x_y_z[:, 0])) / 2.0
+            one_cloud_center_xyz[j, 1] = (np.min(x_y_z[:, 1]) + np.max(x_y_z[:, 1])) / 2.0
+            one_cloud_center_xyz[j, 2] = (np.min(x_y_z[:, 2]) + np.max(x_y_z[:, 2])) / 2.0
+            one_cloud_candicate_superpoints.append(x_y_z)
+
+        print("5")
+
+        one_clound_cd_dist = create_cd(superpoint_list=one_cloud_candicate_superpoints,
+                                       superpoint_centroid_list=one_cloud_center_xyz)
+        for j in range(one_cloud_center_xyz_len):
+            print(cloud_name_list_len, i, "f2", one_cloud_center_xyz_len, j)
+            ssdr = one_cloud_center_xyz - one_cloud_center_xyz[j]
+            dist = np.sqrt(np.sum(np.multiply(ssdr, ssdr), axis=1))
+            A_ed[source_ref_idx_list[j], source_ref_idx_list] = dist
+            A_cd[source_ref_idx_list[j], source_ref_idx_list] = one_clound_cd_dist[j]
+        print("6")
+
+    print("tensor", "1")
+    f
