@@ -147,4 +147,56 @@ class DataProcessing:
     @staticmethod
     def knn_search(support_pts, query_pts, k):
         """
-        :para
+        :param support_pts: points you have, B*N1*3
+        :param query_pts: points you want to know the neighbour index, B*N2*3
+        :param k: Number of neighbours in knn search
+        :return: neighbor_idx: neighboring points indexes, B*N2*k
+        """
+
+        neighbor_idx = nearest_neighbors.knn_batch(support_pts, query_pts, k, omp=True)
+        return neighbor_idx.astype(np.int32)
+
+    @staticmethod
+    def data_aug(xyz, color, labels, activation, pseudo, idx, num_out):
+
+        num_in = len(xyz)
+        dup = np.random.choice(num_in, num_out - num_in)
+        xyz_dup = xyz[dup, ...]
+        xyz_aug = np.concatenate([xyz, xyz_dup], 0)
+        color_dup = color[dup, ...]
+        color_aug = np.concatenate([color, color_dup], 0)
+        idx_dup = list(range(num_in)) + list(dup)
+        idx_aug = idx[idx_dup]
+        label_aug = labels[idx_dup]
+        activation_aug = activation[idx_dup]
+        pseudo_aug = pseudo[idx_dup]
+        return xyz_aug, color_aug, idx_aug, label_aug, activation_aug, pseudo_aug
+
+    @staticmethod
+    def shuffle_idx(x):
+        # random shuffle the index
+        idx = np.arange(len(x))
+        np.random.shuffle(idx)
+        return x[idx]
+
+    @staticmethod
+    def shuffle_list(data_list):
+        indices = np.arange(np.shape(data_list)[0])
+        np.random.shuffle(indices)
+        data_list = data_list[indices]
+        return data_list
+
+    @staticmethod
+    def grid_sub_sampling(points, features=None, labels=None, grid_size=0.1, verbose=0):
+        """
+        CPP wrapper for a grid sub_sampling (method = barycenter for points and features
+        :param points: (N, 3) matrix of input points
+        :param features: optional (N, d) matrix of features (floating number)
+        :param labels: optional (N,) matrix of integer labels
+        :param grid_size: parameter defining the size of grid voxels
+        :param verbose: 1 to display
+        :return: sub_sampled points, with features and/or labels depending of the input
+        """
+
+        if (features is None) and (labels is None):
+       
