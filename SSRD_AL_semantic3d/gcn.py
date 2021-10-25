@@ -89,4 +89,57 @@ def chamfer_distance(cloud_list, tree_list, centroid_idx):
     centroid_cloud = cloud_list[centroid_idx]
     centroid_tree = tree_list[centroid_idx]
     distances = np.zeros([len(cloud_list)])
-    for i in range
+    for i in range(len(cloud_list)):
+        if i != centroid_idx:
+            distances1, _ = centroid_tree.query(cloud_list[i])
+            distances2, _ = tree_list[i].query(centroid_cloud)
+            av_dist1 = np.mean(distances1)
+            av_dist2 = np.mean(distances2)
+            distances[i] = av_dist1 + av_dist2
+    return distances
+
+def create_cd(superpoint_list, superpoint_centroid_list):
+    """numpy"""
+    sp_num = len(superpoint_list)
+    cd_dist = np.zeros([sp_num, sp_num])
+    align_superpoint_list = []
+    tree_list = []
+    for i in range(sp_num):
+        # 中心对齐
+        align_superpoint = superpoint_list[i] - superpoint_centroid_list[i]
+        align_superpoint_list.append(align_superpoint)
+        tree_list.append(KDTree(align_superpoint))
+    for i in range(sp_num):
+        cd_dist[i] = chamfer_distance(align_superpoint_list, tree_list, i)
+    return cd_dist
+
+def create_adj(featuresV, labeled_select_ref, unlabeled_candidate_ref, input_path, data_path, gcn_gpu):
+    begin_time = time.time()
+    print("1")
+    unlabeled_num = len(unlabeled_candidate_ref)
+    print("2")
+    labeled_num = len(labeled_select_ref)
+    print("3")
+    N = unlabeled_num + labeled_num
+    total_cloud = {}  # {cloud_name: [{sp_idx, ref_idx}]}
+    cloud_name_list = []
+    for i in range(unlabeled_num):
+        print("3", i)
+        cloud_name = unlabeled_candidate_ref[i]["cloud_name"]
+        sp_idx = unlabeled_candidate_ref[i]["sp_idx"]
+        if cloud_name not in total_cloud:
+            total_cloud[cloud_name] = []
+            cloud_name_list.append(cloud_name)
+        total_cloud[cloud_name].append({"sp_idx": sp_idx, "ref_idx": i})
+    print("4")
+    for i in range(labeled_num):
+        print("4", i)
+        cloud_name = labeled_select_ref[i]["cloud_name"]
+        sp_idx = labeled_select_ref[i]["sp_idx"]
+        if cloud_name not in total_cloud:
+            total_cloud[cloud_name] = []
+            cloud_name_list.append(cloud_name)
+        total_cloud[cloud_name].append({"sp_idx": sp_idx, "ref_idx": unlabeled_num+i})
+
+    print("ed,cd below")
+    A_ed = np.ones([N, N], dtype=np.
