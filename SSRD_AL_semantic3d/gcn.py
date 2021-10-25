@@ -227,4 +227,40 @@ def GCN_sampling(labeled_select_features, labeled_select_ref, unlabeled_candidat
 
     ############
     for bb in range(2000):
-  
+        print("training gcn ", bb)
+        optimizer.zero_grad()
+        outputs, _, _ = gcn_module(featuresV, adj_tensor)
+        lamda = 1.2
+        loss = BCEAdjLoss(outputs, lbl, nlbl, lamda, gcn_gpu=gcn_gpu)
+        loss.backward()
+        optimizer.step()
+
+    print("\n############\n compute gcn train successfully \n###############\n")
+
+    gcn_module.eval()
+    with torch.no_grad():
+        scores, _, feat = gcn_module(featuresV, adj_tensor)
+        print("\n############\n compute gcn eval successfully \n###############\n")
+
+    feat = feat.detach().cpu().numpy()
+
+    feat = feat.astype(np.float64)
+
+    where_are_nan = np.isnan(feat)
+    where_are_inf = np.isinf(feat)
+
+    feat[where_are_nan] = 1.0 * 1e-10
+    feat[where_are_inf] = 1.0 * 1e10
+
+    already_selected = np.arange(unlabeld_num, unlabeld_num + labeled_num)
+    sampling22222222222 = kCenterGreedy(feat)
+    sampling_index = sampling22222222222.select_batch_(already_selected, sampling_batch)
+
+
+    file_list = {}
+    for i in sampling_index:
+        cloud_name, sp_idx = unlabeled_candidate_ref[i]["cloud_name"], unlabeled_candidate_ref[i]["sp_idx"]
+        if cloud_name not in file_list:
+            file_list[cloud_name] = []
+        file_list[cloud_name].append(sp_idx)
+    return file_list
