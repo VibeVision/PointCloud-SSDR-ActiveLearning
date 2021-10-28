@@ -243,4 +243,51 @@ class DataProcessing:
         # pre-calculate the number of points in each category
         num_per_class = []
         if dataset_name == 'S3DIS':
-          
+            num_per_class = np.array([3370714, 2856755, 4919229, 318158, 375640, 478001, 974733,
+                                      650464, 791496, 88727, 1284130, 229758, 2272837], dtype=np.int32)
+        elif dataset_name == 'semantic3d':
+            # print("hhhhhhhhhhh")
+            num_per_class = np.array([5181602, 5012952, 6830086, 1311528, 10476365, 946982, 334860, 269353],
+                                     dtype=np.int32)
+        elif dataset_name == 'SemanticKITTI':
+            num_per_class = np.array([55437630, 320797, 541736, 2578735, 3274484, 552662, 184064, 78858,
+                                      240942562, 17294618, 170599734, 6369672, 230413074, 101130274, 476491114,
+                                      9833174, 129609852, 4506626, 1168181])
+        weight = num_per_class / float(sum(num_per_class))
+        ce_label_weight = 1 / (weight + 0.02)
+        return np.expand_dims(ce_label_weight, axis=0)
+
+
+class Plot:
+    @staticmethod
+    def random_colors(N, bright=True, seed=0):
+        brightness = 1.0 if bright else 0.7
+        hsv = [(0.15 + i / float(N), 1, brightness) for i in range(N)]
+        colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+        random.seed(seed)
+        random.shuffle(colors)
+        return colors
+
+    @staticmethod
+    def draw_pc(pc_xyzrgb):
+        pc = open3d.PointCloud()
+        pc.points = open3d.Vector3dVector(pc_xyzrgb[:, 0:3])
+        if pc_xyzrgb.shape[1] == 3:
+            open3d.draw_geometries([pc])
+            return 0
+        if np.max(pc_xyzrgb[:, 3:6]) > 20:  ## 0-255
+            pc.colors = open3d.Vector3dVector(pc_xyzrgb[:, 3:6] / 255.)
+        else:
+            pc.colors = open3d.Vector3dVector(pc_xyzrgb[:, 3:6])
+        open3d.draw_geometries([pc])
+        return 0
+
+    @staticmethod
+    def draw_pc_sem_ins(pc_xyz, pc_sem_ins, plot_colors=None):
+        """
+        pc_xyz: 3D coordinates of point clouds
+        pc_sem_ins: semantic or instance labels
+        plot_colors: custom color list
+        """
+        if plot_colors is not None:
+     
