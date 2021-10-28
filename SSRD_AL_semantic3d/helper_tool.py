@@ -199,4 +199,48 @@ class DataProcessing:
         """
 
         if (features is None) and (labels is None):
-       
+            return cpp_subsampling.compute(points, sampleDl=grid_size, verbose=verbose)
+        elif labels is None:
+            return cpp_subsampling.compute(points, features=features, sampleDl=grid_size, verbose=verbose)
+        elif features is None:
+            return cpp_subsampling.compute(points, classes=labels, sampleDl=grid_size, verbose=verbose)
+        else:
+            return cpp_subsampling.compute(points, features=features, classes=labels, sampleDl=grid_size,
+                                           verbose=verbose)
+
+    @staticmethod
+    def IoU_from_confusions(confusions):
+        """
+        Computes IoU from confusion matrices.
+        :param confusions: ([..., n_c, n_c] np.int32). Can be any dimension, the confusion matrices should be described by
+        the last axes. n_c = number of classes
+        :return: ([..., n_c] np.float32) IoU score
+        """
+
+        # Compute TP, FP, FN. This assume that the second to last axis counts the truths (like the first axis of a
+        # confusion matrix), and that the last axis counts the predictions (like the second axis of a confusion matrix)
+        TP = np.diagonal(confusions, axis1=-2, axis2=-1)
+        TP_plus_FN = np.sum(confusions, axis=-1)
+        TP_plus_FP = np.sum(confusions, axis=-2)
+
+        # Compute IoU
+        IoU = TP / (TP_plus_FP + TP_plus_FN - TP + 1e-6)
+
+        # Compute mIoU with only the actual classes
+        mask = TP_plus_FN < 1e-3
+        counts = np.sum(1 - mask, axis=-1, keepdims=True)
+        mIoU = np.sum(IoU, axis=-1, keepdims=True) / (counts + 1e-6)
+
+        # If class is absent, place mIoU in place of 0 IoU to get the actual mean later
+        IoU += mask * mIoU
+        return IoU
+
+    @staticmethod
+    def get_class_weights(dataset_name):
+        print(dataset_name)
+        print(dataset_name == 'semantic3d')
+        # print(dataset_name is 'semantic3d')
+        # pre-calculate the number of points in each category
+        num_per_class = []
+        if dataset_name == 'S3DIS':
+          
