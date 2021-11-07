@@ -105,4 +105,42 @@ class VectorOfCentroids
     // d the dimension of the observation
 public:
     std::vector< std::vector< std::vector<T> > > centroids;
-    VectorOfCen
+    VectorOfCentroids(std::size_t nb_comp, std::size_t dim)
+    {
+        this->centroids = std::vector< std::vector< std::vector<T> > >(nb_comp,
+            std::vector< std::vector<T> >(2, std::vector<T>(dim, 0.0)));
+    }
+};
+template<typename T>
+class Point3D
+{
+public:
+    T x,y,z;
+    Point3D(T x = 0., T y = 0., T z = 0.)
+    {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+    }
+};
+
+template<typename T>
+struct lessPoint3D: public std::binary_function<Point3D<T>, Point3D<T>, bool>
+{
+    bool operator()(const Point3D<T> lhs, const Point3D<T> rhs) const
+    {
+        if (lhs.x != rhs.x)
+        {
+            return lhs.x < rhs.x;
+        }
+        if (lhs.y != rhs.y)
+        {
+            return lhs.y < rhs.y;
+        }
+        if (lhs.z > rhs.z)
+        {
+            return lhs.z < rhs.z;
+        }
+        return true;
+    }
+};
