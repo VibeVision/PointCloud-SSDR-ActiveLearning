@@ -56,3 +56,37 @@ class CutPursuit_KL : public CutPursuit<T>
     //=============================        SPLIT        ===========================================
     //=============================================================================================
     virtual uint32_t  split() override
+    { // split the graph by trying to find the best binary partition
+      // each components is split into B and notB
+      // for each components we associate the value h_1 and h_2 to vertices in B or notB
+      // the affectation as well as h_1 and h_2 are computed alternatively
+      //tic();
+      //--------loading structures---------------------------------------------------------------
+        TimeStack ts; ts.tic();
+        uint32_t  nb_comp = this->components.size();
+        VertexAttributeMap<T> vertex_attribute_map
+                   = boost::get(boost::vertex_bundle, this->main_graph);
+        VertexIndexMap<T> vertex_index_map = boost::get(boost::vertex_index, this->main_graph);
+        uint32_t  saturation;
+        //initialize h_1 and h_2 with kmeans
+        //stores wether each vertex is B or notB
+        std::vector<bool> binary_label(this->nVertex);
+        this->init_labels(binary_label);
+        VectorOfCentroids<T> centers(nb_comp, this->dim);
+        //-----main loop----------------------------------------------------------------
+                // the optimal flow is iteratively approximated
+        for (uint32_t  i_step = 1; i_step <= this->parameter.flow_steps; i_step++)
+        {
+            //compute h_1 and h_2
+            centers = VectorOfCentroids<T>(nb_comp, this->dim);
+            this->compute_centers(centers, binary_label);
+            // update the capacities of the flow graph
+            this->set_capacities(centers);
+            //compute flow
+            boost::boykov_kolmogorov_max_flow(
+                       this->main_graph,
+                       get(&EdgeAttribute<T>::capacity        , this->main_graph),
+                       get(&EdgeAttribute<T>::residualCapacity, this->main_graph),
+                       get(&EdgeAttribute<T>::edge_reverse     , this->main_graph),
+                       get(&VertexAttribute<T>::color         , this->main_graph),
+                       get(boo
