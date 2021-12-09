@@ -233,4 +233,42 @@ class CutPursuit_KL : public CutPursuit<T>
                     }
                     //-----computation of the new kernels----------------------------
                     total_weight[0] = 0.;
-                    t
+                    total_weight[1] = 0.;
+                    for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                    {
+                       kernels[0][i_dim] = 0;
+                       kernels[1][i_dim] = 0;
+                    }
+                    for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                    {
+                        if (vertex_attribute_map(this->components[i_com][i_ver]).weight==0)
+                        {
+                            continue;
+                        }
+                        if (potential_label[i_ver])
+                        {
+                            total_weight[0] += vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                            for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                            {
+                                kernels[0][i_dim] += 
+                                    vertex_attribute_map(this->components[i_com][i_ver]).observation[i_dim]
+                                    * vertex_attribute_map(this->components[i_com][i_ver]).weight ;
+                             }
+                         }
+                         else
+                         {
+                            total_weight[1] += vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                            for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                            {
+                                kernels[1][i_dim] += 
+                                    vertex_attribute_map(this->components[i_com][i_ver]).observation[i_dim]
+                                    * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                            }
+                         }
+                    }
+                    if ((total_weight[0] == 0)||(total_weight[1] == 0))
+                    {
+                        std::cout << "kmeans error" << std::endl;
+                    }
+                    for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+           
