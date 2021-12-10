@@ -313,4 +313,44 @@ class CutPursuit_KL : public CutPursuit<T>
                     {
                         binary_label[vertex_index_map(this->components[i_com][i_ver])] = potential_label[i_ver];
                     }
-              
+                }
+            }
+        }
+     }
+    //=============================================================================================
+    //=============================  COMPUTE_CENTERS_KL  ==========================================
+    //=============================================================================================
+    inline void compute_centers(VectorOfCentroids<T> & centers, const std::vector<bool> & binary_label)
+    {
+        //compute for each component the values of h_1 and h_2
+        VertexAttributeMap<T> vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->main_graph);
+        VertexIndexMap<T> vertex_index_map = boost::get(boost::vertex_index, this->main_graph);
+        uint32_t  nb_comp = this->components.size();
+        //#pragma omp parallel for if (this->parameter.parallel) schedule(dynamic)
+        for (uint32_t  i_com = 0; i_com < nb_comp; i_com++)
+        {
+            if (this->saturated_components[i_com])
+            {
+                continue;
+            }
+            T total_weight[2];
+            total_weight[0] = 0.;
+            total_weight[1] = 0.;
+            for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+            {
+                centers.centroids[i_com][0][i_dim] = 0.;
+                centers.centroids[i_com][1][i_dim] = 0.;
+            }
+            for (uint32_t  i_ver = 0;  i_ver < this->components[i_com].size(); i_ver++)
+            {
+                if (vertex_attribute_map(this->components[i_com][i_ver]).weight==0)
+                {
+                    continue;
+                }
+                if (binary_label[vertex_index_map(this->components[i_com][i_ver])])
+                {
+                    total_weight[0] += vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                    for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                    {
+                       centers.centroids[i_com][0][i_dim] += vertex_attribute_map(this->components[i_com][i_ver]).observatio
