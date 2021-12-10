@@ -271,4 +271,46 @@ class CutPursuit_KL : public CutPursuit<T>
                         std::cout << "kmeans error" << std::endl;
                     }
                     for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
-           
+                    {
+                        kernels[0][i_dim] = kernels[0][i_dim] / total_weight[0];
+                        kernels[1][i_dim] = kernels[1][i_dim] / total_weight[1];
+                        smooth_kernels[0][i_dim] =  this->parameter.smoothing
+                            / this->dim + (1 - this->parameter.smoothing)
+                            * kernels[0][i_dim];
+                        smooth_kernels[1][i_dim] =  this->parameter.smoothing
+                            / this->dim + (1 - this->parameter.smoothing)
+                            * kernels[1][i_dim];
+                    }
+                }
+                //----compute the associated energy ------
+                current_energy = 0;
+                for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                {
+                    current_energy += constant_part[i_ver];
+                    if (potential_label[i_ver])
+                    {
+                        for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                        {
+                            current_energy -= smooth_obs[i_ver][i_dim]
+                                 * log(smooth_kernels[0][i_dim])
+                                 * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                        }
+                    }
+                    else
+                    {
+                        for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                        {
+                            current_energy -= smooth_obs[i_ver][i_dim]
+                                 * log(smooth_kernels[1][i_dim])
+                                 * vertex_attribute_map(this->components[i_com][i_ver]).weight;
+                        }
+                    }
+                }
+                if (current_energy < best_energy)
+                {
+                    best_energy = current_energy;
+                    for (uint32_t  i_ver = 0;  i_ver < comp_size; i_ver++)
+                    {
+                        binary_label[vertex_index_map(this->components[i_com][i_ver])] = potential_label[i_ver];
+                    }
+              
