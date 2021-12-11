@@ -393,4 +393,39 @@ class CutPursuit_KL : public CutPursuit<T>
     //=============================================================================================
     inline void set_capacities(const VectorOfCentroids<T> & centers)
     {
-       
+        VertexAttributeMap<T> vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->main_graph);
+        EdgeAttributeMap<T> edge_attribute_map
+                = boost::get(boost::edge_bundle, this->main_graph);
+        VertexDescriptor<T> desc_v;
+        EdgeDescriptor   desc_source2v, desc_v2sink, desc_v2source;
+        uint32_t  nb_comp = this->components.size();
+        T cost_B, cost_notB, smoothedValueB, smoothedValueNotB, smoothedObservation; //the cost of being in B or not B, local for each component
+        //----first compute the capacity in sink/node edges------------------------------------
+        //#pragma omp parallel for if (this->parameter.parallel) schedule(dynamic)
+        for (uint32_t  i_com = 0; i_com < nb_comp; i_com++)
+        {
+            if (this->saturated_components[i_com])
+            {
+                continue;
+            }
+            for (uint32_t  i_ver = 0;  i_ver < this->components[i_com].size(); i_ver++)
+            {
+                desc_v    = this->components[i_com][i_ver];
+                // because of the adjacency structure NEVER access edge (source,v) directly!
+                desc_v2source = boost::edge(desc_v, this->source,this->main_graph).first;
+                desc_source2v = edge_attribute_map(desc_v2source).edge_reverse; //use edge_reverse instead
+                desc_v2sink   = boost::edge(desc_v, this->sink,this->main_graph).first;
+                cost_B    = 0;
+                cost_notB = 0;
+                if (vertex_attribute_map(desc_v).weight==0)
+                {
+                    edge_attribute_map(desc_source2v).capacity = 0;
+                    edge_attribute_map(desc_v2sink).capacity   = 0;
+                    continue;
+                }
+                for(uint32_t  i_dim=0; i_dim < this->dim; i_dim++)
+                {
+                    smoothedObservation =
+                             this->parameter.smoothing / this->dim
+                           + (1 -
