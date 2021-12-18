@@ -511,4 +511,40 @@ class CutPursuit_KL : public CutPursuit<T>
         return std::pair<std::vector<T>, T>(compValue, total_weight);
     }
     //=============================================================================================
-    //=================================   COMPUTE_MERGE_GAIN   ===========================
+    //=================================   COMPUTE_MERGE_GAIN   =========================================
+    //=============================================================================================
+    virtual std::pair<std::vector<T>, T> compute_merge_gain(const VertexDescriptor<T> & comp1
+                                             , const VertexDescriptor<T> & comp2) override
+    {
+        VertexAttributeMap<T> reduced_vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->reduced_graph);
+        std::vector<T> merge_value(this->dim);
+        T gain = 0, smoothedValue1, smoothedValue2, smoothedValueMerged;
+        // compute the value obtained by mergeing the two connected components
+        for(uint32_t  i_dim=0; i_dim<this->dim; i_dim++)
+        {
+            merge_value[i_dim] =
+                    (reduced_vertex_attribute_map(comp1).weight *
+                     reduced_vertex_attribute_map(comp1).value[i_dim]
+                    +reduced_vertex_attribute_map(comp2).weight *
+                     reduced_vertex_attribute_map(comp2).value[i_dim])
+                   /(reduced_vertex_attribute_map(comp1).weight
+                    +reduced_vertex_attribute_map(comp2).weight);
+            smoothedValue1 =
+                     this->parameter.smoothing / this->dim
+                   + (1 - this->parameter.smoothing)
+                   * reduced_vertex_attribute_map(comp1).value[i_dim];
+            smoothedValue2 =
+                     this->parameter.smoothing / this->dim
+                   + (1 - this->parameter.smoothing)
+                   * reduced_vertex_attribute_map(comp2).value[i_dim];
+            smoothedValueMerged =
+                    this->parameter.smoothing / this->dim
+                  + (1 - this->parameter.smoothing)
+                  * merge_value[i_dim];
+            gain -= reduced_vertex_attribute_map(comp1).weight
+                  * smoothedValue1 * (log(smoothedValue1)
+                  - log(smoothedValueMerged))
+                  + reduced_vertex_attribute_map(comp2).weight
+                    * smoothedValue2 * (log(smoothedValue2)
+                    - log(smoothedVal
