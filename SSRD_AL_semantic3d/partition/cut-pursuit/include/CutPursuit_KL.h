@@ -547,4 +547,9 @@ class CutPursuit_KL : public CutPursuit<T>
                   - log(smoothedValueMerged))
                   + reduced_vertex_attribute_map(comp2).weight
                     * smoothedValue2 * (log(smoothedValue2)
-                    - log(smoothedVal
+                    - log(smoothedValueMerged));
+        }
+        return std::pair<std::vector<T>, T>(merge_value, gain);
+    }
+};
+}
