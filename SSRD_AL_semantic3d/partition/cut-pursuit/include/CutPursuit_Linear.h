@@ -79,4 +79,40 @@ class CutPursuit_Linear : public CutPursuit<T>
                    get(&VertexAttribute<T>::color         , this->main_graph),
                    get(boost::vertex_index                , this->main_graph),
                    this->source,
-                   
+                   this->sink);
+        saturation = this->activate_edges();
+        return saturation;
+    }
+    //=============================================================================================
+    //=============================      COMPUTE CORNERS        ===================================
+    //=============================================================================================
+    inline void compute_corners(std::vector< std::vector< uint32_t > > & corners)
+    { //-----compute the 2 most populous labels------------------------------
+         //#pragma omp parallel for if (this->parameter.parallel) schedule(dynamic)
+        for (uint32_t  i_com =0;i_com < this->components.size(); i_com++)
+        {
+            if (this->saturated_components[i_com])
+            {
+                continue;
+            }
+            std::pair<uint32_t, uint32_t> corners_pair = find_corner(i_com);
+            corners[i_com][0] = corners_pair.first;
+            corners[i_com][1] = corners_pair.second;
+        }
+        return;
+    }
+    //=============================================================================================
+    //=============================     find_corner        =======================================
+    //=============================================================================================
+    std::pair<uint32_t, uint32_t> find_corner(const uint32_t & i_com)
+    {
+        // given a component will output the pairs of the two most likely labels
+        VertexAttributeMap<T> vertex_attribute_map
+                                    = boost::get(boost::vertex_bundle, this->main_graph);
+        std::vector<T> average_vector(this->dim,0);
+        for (uint32_t i_ver = 0;  i_ver < this->components[i_com].size(); i_ver++)
+        {
+            for(uint32_t i_dim=0; i_dim < this->dim; i_dim++)
+            {
+            average_vector.at(i_dim) += vertex_attribute_map[this->components[i_com][i_ver]].observation[i_dim]
+                                *  vertex_attribute_map[this->components[i_com][i_ver]].weight;
