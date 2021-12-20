@@ -116,3 +116,49 @@ class CutPursuit_Linear : public CutPursuit<T>
             {
             average_vector.at(i_dim) += vertex_attribute_map[this->components[i_com][i_ver]].observation[i_dim]
                                 *  vertex_attribute_map[this->components[i_com][i_ver]].weight;
+            }
+        }
+        uint32_t indexOfMax = 0;
+        for(uint32_t i_dim=1; i_dim < this->dim; i_dim++)
+        {
+            if(average_vector.at(indexOfMax) < average_vector.at(i_dim))
+            {
+                indexOfMax = i_dim;
+            }
+        }
+        average_vector[indexOfMax] = -1;
+        uint32_t indexOfSndMax = 0;
+        for(uint32_t i_dim=1; i_dim < this->dim; i_dim++)
+        {
+            if(average_vector[indexOfSndMax] < average_vector[i_dim])
+            {
+                indexOfSndMax = i_dim;
+            }
+        }
+        return std::pair<uint32_t, uint32_t>(indexOfMax, indexOfSndMax);
+    }
+    //=============================================================================================
+    //=============================       SET_CAPACITIES    =======================================
+    //=============================================================================================
+    inline void set_capacities(const std::vector< std::vector< uint32_t > > & corners)
+    {
+        VertexDescriptor<T> desc_v;
+        EdgeDescriptor   desc_source2v, desc_v2sink, desc_v2source;
+        VertexAttributeMap<T> vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->main_graph);
+        EdgeAttributeMap<T> edge_attribute_map
+                = boost::get(boost::edge_bundle, this->main_graph);
+        T cost_B, cost_notB; //the cost of being in B or not B, local for each component
+        //----first compute the capacity in sink/node edges------------------------------------
+         //#pragma omp parallel for if (this->parameter.parallel) schedule(dynamic)
+        for (uint32_t i_com = 0; i_com < this->components.size(); i_com++)
+        {
+            if (this->saturated_components[i_com])
+            {
+                continue;
+            }
+            for (uint32_t i_ver = 0;  i_ver < this->components[i_com].size(); i_ver++)
+            {
+                desc_v    = this->components[i_com][i_ver];
+                // because of the adjacency structure NEVER access edge (source,v) directly!
+                desc_v2source = boost::ed
