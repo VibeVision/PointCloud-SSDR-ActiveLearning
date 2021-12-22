@@ -95,4 +95,53 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     //plhs[0] = mxDuplicateArray(prhs[0]);
     uint32_t * in_component_array, * Eu_red_array, * Ev_red_array;
     float * edge_weight_red_array, * node_weight_red_array;
-    
+    uint32_t n_nodes_red, n_edges_red;
+    std::vector<uint32_t> in_component, Eu_red, Ev_red;
+    std::vector< std::vector<uint32_t> > components;
+    std::vector<float>  edge_weight_red, node_weight_red;
+
+    if (true)
+    {
+    CP::cut_pursuit<float>(n_nodes, nEdg, nObs
+            , observation, Eu, Ev, edge_weight, node_weight
+            , solution
+            , in_component, components
+            , n_nodes_red, n_edges_red,  Eu_red, Ev_red
+            , edge_weight_red,node_weight_red
+            ,lambda, cutoff, mode, speed, weight_decay, verbose);
+    }
+    if (true)
+    {
+        //std::cout << in_component[0] << " " << in_component[1000] << " " << in_component[1000000] << std::endl;
+        
+
+        //float *  edge_weight_red_array, * node_weight_red_array;
+
+    //-----------fill solution----------
+    plhs[0] = mxDuplicateArray(prhs[0]);
+    float * solution_array = (float *) mxGetData(plhs[0]);
+    ind_obs = 0;
+    for (int ind_nod = 0; ind_nod < n_nodes; ind_nod++)
+    {
+        for (int ind_dim = 0; ind_dim < nObs; ind_dim++)
+        {
+            solution_array[ind_obs] = solution[ind_nod][ind_dim];
+            ind_obs++;
+        }
+    }
+    //----------fill in_component----------
+    plhs[1] = mxCreateNumericMatrix(n_nodes, 1 , mxUINT32_CLASS, mxREAL);
+    in_component_array = (uint32_t*) mxGetData(plhs[1]);
+    std::copy(in_component.begin(), in_component.end(), in_component_array);
+
+    //----------fill components----------
+    mxArray *components_ptr = mxCreateCellMatrix(n_nodes_red , 1 );
+    for(int ind_nod_red = 0; ind_nod_red < n_nodes_red; ind_nod_red++)
+    {
+        std::size_t comp_size = components[ind_nod_red].size();
+        mxArray * one_component_ptr;
+        //std::cout << ind_nod_red << " " << comp_size << std::endl;
+        one_component_ptr = mxCreateNumericMatrix(comp_size , 1, mxINT32_CLASS, mxREAL);
+        std::copy(components[ind_nod_red].begin(), components[ind_nod_red].end(), (int*) mxGetData(one_component_ptr));
+        //memcpy(mxGetPr(one_component_ptr), &components[ind_nod_red][0], sizeof(int) * comp_size);
+        mxSetCell(components
