@@ -207,4 +207,45 @@ class CutPursuit_Linear : public CutPursuit<T>
         }
     }
     //=============================================================================================
-    //========
+    //=================================   COMPUTE_VALUE   =========================================
+    //=============================================================================================
+    virtual std::pair<std::vector<T>, T> compute_value(const uint32_t & i_com) override
+    {
+        VertexAttributeMap<T> vertex_attribute_map
+                                    = boost::get(boost::vertex_bundle, this->main_graph);
+        if (i_com == 0)
+        {  // we allocate the space necessary for the component vector at the first read of the component
+           this-> componentVector = std::vector<std::vector<T>>(this->components.size());
+        }
+        std::vector<T> average_vector(this->dim), component_value(this->dim);
+        T total_weight = 0;
+        for(uint32_t i_dim=0; i_dim < this->dim; i_dim++)
+        {
+            average_vector[i_dim] = 0;
+        }
+        for (uint32_t ind_ver = 0; ind_ver < this->components[i_com].size(); ++ind_ver)
+        {
+            for(uint32_t i_dim=0; i_dim < this->dim; i_dim++)
+            {
+            average_vector[i_dim] += vertex_attribute_map[this->components[i_com][ind_ver]].observation[i_dim]
+                                *  vertex_attribute_map[this->components[i_com][ind_ver]].weight;
+            }
+            total_weight += vertex_attribute_map[this->components[i_com][ind_ver]].weight;
+            vertex_attribute_map(this->components[i_com][ind_ver]).in_component = i_com;
+        }
+        this->componentVector[i_com] = average_vector;
+        uint32_t indexOfMax = 0;
+        for(uint32_t i_dim=1; i_dim < this->dim; i_dim++)
+        {
+            if(average_vector[indexOfMax] < average_vector[i_dim])
+            {
+                indexOfMax = i_dim;
+            }
+        }
+        for (uint32_t ind_ver = 0; ind_ver < this->components[i_com].size(); ++ind_ver)
+        {
+            for(uint32_t i_dim=0; i_dim<this->dim; i_dim++)
+            {
+               if (i_dim == indexOfMax)
+               {
+                   component_value[i_di
