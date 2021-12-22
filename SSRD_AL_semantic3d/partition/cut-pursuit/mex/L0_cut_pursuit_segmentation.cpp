@@ -56,4 +56,43 @@
 // n_edges_red x 1 float edge_weight_red: weights of reduced edges
 // n_nodes_red x 1  float node_weight_red: weights of reduced nodes
 // n_edges_red x 1 cell vertices_border: for each edge of the reduced graph,
-//  the list of index of the edges composing
+//  the list of index of the edges composing the interface between components
+
+
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+{
+    //---read dimensions----//
+    const int n_nodes = mxGetN(prhs[0]); //number of nodes
+    const int nObs = mxGetM(prhs[0]); // size of observation for each node
+    const int nEdg = mxGetNumberOfElements(prhs[1]); //number of edges
+    //---read inputs----
+    std::vector< std::vector<float> > observation(n_nodes);
+    const std::vector<uint32_t> Eu((uint32_t*)mxGetData(prhs[1]), (uint32_t*)mxGetData(prhs[1])+nEdg);
+    const std::vector<uint32_t> Ev((uint32_t*)mxGetData(prhs[2]), (uint32_t*)mxGetData(prhs[2])+nEdg);
+    const float lambda        = (float) mxGetScalar(prhs[3]); //reg strength
+    const std::vector<float> edge_weight((float*)mxGetData(prhs[4]), (float*)mxGetData(prhs[4])+nEdg);
+    const std::vector<float> node_weight((float*)mxGetData(prhs[5]), (float*)mxGetData(prhs[5])+n_nodes);
+    const float mode          = (float) mxGetScalar(prhs[6]); //fidelity
+    const uint32_t cutoff     = (uint32_t) mxGetScalar(prhs[7]); //cut off
+    const float speed         = (float) mxGetScalar(prhs[8]); //speed mode
+    const float weight_decay  = (float) mxGetScalar(prhs[9]); //weight decay*/
+    const float verbose       = (float) mxGetScalar(prhs[10]); //verbosity*/
+    //--fill the observation----
+    const float *observation_array = (float*) mxGetData(prhs[0]);
+    std::vector< std::vector<float> > solution(n_nodes);
+    int ind_obs = 0;
+    for (int ind_nod = 0; ind_nod < n_nodes; ind_nod++)
+    {
+        observation[ind_nod] = std::vector<float>(nObs);
+        solution[ind_nod]    = std::vector<float>(nObs);
+        for (int ind_dim = 0; ind_dim < nObs; ind_dim++)
+        {   
+            observation[ind_nod][ind_dim] = observation_array[ind_obs];
+            ind_obs++;
+        }
+    }
+    //---set up output--------------------------------
+    //plhs[0] = mxDuplicateArray(prhs[0]);
+    uint32_t * in_component_array, * Eu_red_array, * Ev_red_array;
+    float * edge_weight_red_array, * node_weight_red_array;
+    
