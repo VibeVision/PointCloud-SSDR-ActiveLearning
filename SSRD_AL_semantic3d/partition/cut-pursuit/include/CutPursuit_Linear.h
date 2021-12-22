@@ -161,4 +161,50 @@ class CutPursuit_Linear : public CutPursuit<T>
             {
                 desc_v    = this->components[i_com][i_ver];
                 // because of the adjacency structure NEVER access edge (source,v) directly!
-                desc_v2source = boost::ed
+                desc_v2source = boost::edge(desc_v, this->source,this->main_graph).first;
+                desc_source2v = edge_attribute_map(desc_v2source).edge_reverse; //use edge_reverse instead
+                desc_v2sink   = boost::edge(desc_v, this->sink,this->main_graph).first;
+                cost_B    = 0;
+                cost_notB = 0;
+                if (vertex_attribute_map(desc_v).weight==0)
+                {
+                    edge_attribute_map(desc_source2v).capacity = 0;
+                    edge_attribute_map(desc_v2sink).capacity   = 0;
+                    continue;
+                }
+                cost_B    += vertex_attribute_map(desc_v).observation[corners[i_com][0]];
+                cost_notB += vertex_attribute_map(desc_v).observation[corners[i_com][1]];
+                if (cost_B>cost_notB)
+                {
+                    edge_attribute_map(desc_source2v).capacity = cost_B - cost_notB;
+                    edge_attribute_map(desc_v2sink).capacity   = 0.;
+                }
+                else
+                {
+                    edge_attribute_map(desc_source2v).capacity = 0.;
+                    edge_attribute_map(desc_v2sink).capacity   = cost_notB - cost_B;
+                }
+            }
+        }
+        //----then set the vertex to vertex edges ---------------------------------------------
+        EdgeIterator<T> i_edg, i_edg_end;
+        for (boost::tie(i_edg, i_edg_end) = boost::edges(this->main_graph);
+             i_edg != i_edg_end; ++i_edg)
+        {
+            if (!edge_attribute_map(*i_edg).realEdge)
+            {
+                continue;
+            }
+            if (!edge_attribute_map(*i_edg).isActive)
+            {
+                edge_attribute_map(*i_edg).capacity
+                        = edge_attribute_map(*i_edg).weight * this->parameter.reg_strenth;
+            }
+            else
+            {
+                edge_attribute_map(*i_edg).capacity = 0;
+            }
+        }
+    }
+    //=============================================================================================
+    //========
