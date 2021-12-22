@@ -248,4 +248,45 @@ class CutPursuit_Linear : public CutPursuit<T>
             {
                if (i_dim == indexOfMax)
                {
-                   component_value[i_di
+                   component_value[i_dim] = 1;
+                   vertex_attribute_map(this->components[i_com][ind_ver]).value[i_dim] = 1;
+               }
+               else
+               {
+                   component_value[i_dim] = 0;
+                   vertex_attribute_map(this->components[i_com][ind_ver]).value[i_dim] = 0;
+               }
+            }
+        }
+        return std::pair<std::vector<T>, T>(component_value, total_weight);
+    }
+    //=============================================================================================
+    //=================================   COMPUTE_MERGE_GAIN   =========================================
+    //=============================================================================================
+    virtual std::pair<std::vector<T>, T> compute_merge_gain(const VertexDescriptor<T> & comp1
+                                         , const VertexDescriptor<T> & comp2) override
+    {
+        VertexAttributeMap<T> reduced_vertex_attribute_map
+                = boost::get(boost::vertex_bundle, this->reduced_graph);
+        VertexIndexMap<T> reduced_vertex_vertex_index_map = get(boost::vertex_index, this->reduced_graph);
+        std::vector<T> merge_value(this->dim), mergedVector(this->dim);
+        T gain = 0;
+        // compute the value obtained by mergeing the two connected components
+        for(uint32_t i_dim=0; i_dim<this->dim; i_dim++)
+        {
+            mergedVector[i_dim] = this->componentVector[reduced_vertex_vertex_index_map(comp1)][i_dim]
+                                + this->componentVector[reduced_vertex_vertex_index_map(comp2)][i_dim];
+        }
+        uint32_t indexOfMax = 0;
+        for(uint32_t i_dim=1; i_dim < this->dim; i_dim++)
+        {
+            if(mergedVector[indexOfMax] < mergedVector[i_dim])
+            {
+                indexOfMax = i_dim;
+            }
+        }
+        for(uint32_t i_dim=0; i_dim<this->dim; i_dim++)
+        {
+            if (i_dim == indexOfMax)
+            {
+       
