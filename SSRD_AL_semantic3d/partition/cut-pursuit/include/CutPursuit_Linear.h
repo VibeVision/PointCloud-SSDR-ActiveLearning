@@ -289,4 +289,20 @@ class CutPursuit_Linear : public CutPursuit<T>
         {
             if (i_dim == indexOfMax)
             {
-       
+                merge_value[i_dim] = 1;
+            }
+            else
+            {
+                merge_value[i_dim] = 0;
+            }
+            gain += mergedVector[i_dim] *  merge_value[i_dim]
+                  - this->componentVector[reduced_vertex_vertex_index_map(comp1)][i_dim]
+                  * reduced_vertex_attribute_map(comp1).value[i_dim]
+                  - this->componentVector[reduced_vertex_vertex_index_map(comp2)][i_dim]
+                  * reduced_vertex_attribute_map(comp2).value[i_dim];
+        }
+
+        return std::pair<std::vector<T>, T>(merge_value, gain);
+    }
+};
+}
