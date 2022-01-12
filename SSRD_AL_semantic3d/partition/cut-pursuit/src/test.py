@@ -17,4 +17,5 @@ edge_weight = np.array([1,1,1,1,1,1,1,1,1,1], dtype='float32')
 reg_str = np.array([1,5], dtype='float32')
 cut_off = np.array([1,1], dtype='uint32')
 
-hier = libcp.cutpursuit_hierarchy(x, Eu, Ev,  Ew ,rs, co
+hier = libcp.cutpursuit_hierarchy(x, Eu, Ev,  Ew ,rs, co, 0, 0.7)
+
