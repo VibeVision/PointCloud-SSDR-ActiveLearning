@@ -63,4 +63,48 @@ void connected_components(const uint32_t n_ver, const uint32_t n_edg
 			int largest_neigh_comp_index = -1;
 			for (int i_ver_com = 0; i_ver_com < components_ssdr[i_com].size(); i_ver_com++)
 			{	//std::cout << "	considering node" << components_ssdr[i_com][i_ver_com] << std::endl;
-				boost::tie(nei_ini, nei_end) = adjacent_vertic
+				boost::tie(nei_ini, nei_end) = adjacent_vertices(vertex(components_ssdr[i_com][i_ver_com], G), G);
+				for (graph_traits < Graph >::adjacency_iterator nei_ite = nei_ini; nei_ite != nei_end; nei_ite++)
+				{
+					int candidate_comp = in_component[vertex_index_map(*nei_ite)];
+					if ((candidate_comp == i_com) || (is_fused[candidate_comp]))
+					{
+						continue;
+					}
+					//std::cout << "		neighbors " << vertex_index_map(*nei_ite) << " in comp " << candidate_comp << "of size " << components_ssdr[candidate_comp].size() << std::endl;
+					if (components_ssdr[candidate_comp].size() > largest_neigh_comp_value)
+					{
+						largest_neigh_comp_value = components_ssdr[candidate_comp].size() ;
+						largest_neigh_comp_index = candidate_comp;
+					}
+				}
+			}
+			if (largest_neigh_comp_index>0)
+			{
+				//std::cout << "best comp = " << largest_neigh_comp_index << " of size " << largest_neigh_comp_value << std::endl;
+				//we now fuse the two connected components
+				components_ssdr[largest_neigh_comp_index].insert(components_ssdr[largest_neigh_comp_index].end(), components_ssdr[i_com].begin(), components_ssdr[i_com].end());
+				is_fused[i_com] = 1;
+				n_com_final--;
+			}
+		}	
+	}	
+
+	components.resize(n_com_final);
+	int i_com_index = 0;
+	for (int i_com = 0; i_com < n_com; i_com++)
+	{
+		if (!is_fused[i_com])
+		{
+			components[i_com_index] = components_ssdr[i_com];
+			for (uint32_t i_ver_com = 0; i_ver_com < components_ssdr[i_com].size(); i_ver_com++)
+			{
+				in_component[components_ssdr[i_com][i_ver_com]] = i_com_index;
+			}
+			i_com_index++;
+		}
+	}	
+
+
+    return;
+}
