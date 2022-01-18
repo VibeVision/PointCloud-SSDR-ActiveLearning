@@ -473,3 +473,38 @@ PyObject * connected_comp(const uint32_t n_ver, const bpn::ndarray & source, con
 
     std::vector<uint32_t> in_component(n_ver,0);
     std::vector< std::vector<uint32_t> > components(1,std::vector<uint32_t>());
+
+    connected_components(n_ver, n_edg, source_data, target_data, active_edg_data, in_component, components, cutoff);
+
+    return to_py_tuple_components::convert(Components_tuple(components, in_component));
+}
+
+
+PyObject * random_subgraph(const int n_ver, const bpn::ndarray & source, const bpn::ndarray & target, const int subgraph_size)
+{//read data and run the L0-cut pursuit partition algorithm
+
+    const int n_edg = bp::len(source);
+    const uint32_t * source_data = reinterpret_cast<uint32_t*>(source.get_data());
+    const uint32_t * target_data = reinterpret_cast<uint32_t*>(target.get_data());
+
+    std::vector<uint8_t> selected_edges(n_edg,0);
+    std::vector<uint8_t> selected_vertices(n_ver,0);
+
+    subgraph::random_subgraph(n_ver, n_edg, source_data, target_data, subgraph_size, selected_edges.data(), selected_vertices.data());
+
+    return to_py_tuple_subgraph::convert(Subgraph_tuple(selected_edges,selected_vertices));
+}
+
+using namespace boost::python;
+BOOST_PYTHON_MODULE(libply_c)
+{
+    _import_array();
+    bp::to_python_converter<std::vector<std::vector<float>, std::allocator<std::vector<float> > >, VecvecToArray<float> >();
+    bp::to_python_converter< Custom_tuple, to_py_tuple>();
+    Py_Initialize();
+    bpn::initialize();
+    def("compute_geof", compute_geof);
+    def("prune", prune);
+    def("connected_comp", connected_comp);
+    def("random_subgraph", random_subgraph);
+}
