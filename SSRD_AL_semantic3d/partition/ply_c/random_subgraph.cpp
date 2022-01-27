@@ -65,4 +65,34 @@ void random_subgraph(const int n_ver, const int n_edg, const uint32_t * Eu, cons
             while(!ver_queue.empty())
             {
                 //pop the top of the queue and mark it as seen
-                
+                ver_current = ver_queue.front();
+                ver_queue.pop();
+
+                //add the neighbors of that vertex
+                for (tie(ite_ver_adj, ite_ver_adj_end) = adjacent_vertices(ver_current, G); ite_ver_adj != ite_ver_adj_end; ite_ver_adj++)
+                {
+                    int i_ver_adj = vertex_index_map(*ite_ver_adj);
+                    if ((selected_vertices[i_ver_adj]==0) && (node_seen <= subgraph_size))
+                    {//vertex not already seen
+                        node_seen = node_seen + 1;
+                        selected_vertices[i_ver_adj] = 1;
+                        ver_queue.push(*ite_ver_adj);
+                    }
+
+                    if (node_seen >= subgraph_size)
+                    {//enough vertices
+                        break;
+                    }
+
+                }
+            }
+        }
+
+        for (int i_edg = 0; i_edg < n_edg; i_edg++)
+        {   //add edges between selected vertices
+            selected_edges[i_edg] = selected_vertices[vertex_index_map(vertex(Eu[i_edg],G))]
+                                  * selected_vertices[vertex_index_map(vertex(Ev[i_edg],G))];
+        }
+    return;
+}
+}
