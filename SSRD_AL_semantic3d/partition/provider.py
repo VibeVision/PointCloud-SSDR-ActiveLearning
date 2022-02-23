@@ -146,4 +146,47 @@ def get_color_from_label(object_label, dataset):
             1: [ 200, 200, 200], #'man-made terrain'  ->  grey
             2: [   0,  70,   0], #'natural terrain'  ->  dark green
             3: [   0, 255,   0], #'high vegetation'  ->  bright green
-            4: [ 255, 255,   0], #'low
+            4: [ 255, 255,   0], #'low vegetation'  ->  yellow
+            5: [ 255,   0,   0], #'building'  ->  red
+            6: [ 148,   0, 211], #'hard scape'  ->  violet
+            7: [   0, 255, 255], #'artifact'   ->  cyan
+            8: [ 255,   8, 127], #'cars'  ->  pink
+            }.get(object_label, -1)
+    elif (dataset == 'vkitti'): #vkitti3D
+        object_label =  {
+            0:  [   0,   0,   0], # None-> black
+            1:  [ 200,  90,   0], # Terrain .->.brown
+            2:  [   0, 128,  50], # Tree  -> dark green
+            3:  [   0, 220,   0], # Vegetation-> bright green
+            4:  [ 255,   0,   0], # Building-> red
+            5:  [ 100, 100, 100] , # Road-> dark gray
+            6:  [ 200, 200, 200], # GuardRail-> bright gray
+            7:  [ 255,   0, 255], # TrafficSign-> pink
+            8:  [ 255, 255,   0], # TrafficLight-> yellow
+            9:  [ 128,   0, 255], # Pole-> violet
+            10:  [ 255, 200, 150], # Misc-> skin
+            11: [   0, 128, 255], # Truck-> dark blue
+            12: [   0, 200, 255], # Car-> bright blue
+            13: [ 255, 128,   0], # Van-> orange
+            }.get(object_label, -1)
+    elif (dataset == 'custom_dataset'): #Custom set
+        object_label =  {
+            0: [0   ,   0,   0], #unlabelled .->. black
+            1: [ 255, 0, 0], #'classe A' -> red
+            2: [ 0, 255, 0], #'classeB' -> green
+            }.get(object_label, -1)
+    else:
+        raise ValueError('Unknown dataset: %s' % (dataset))
+    if object_label == -1:
+        raise ValueError('Type not recognized: %s' % (object_label))
+    return object_label
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def read_s3dis_format(raw_path, label_out=True):
+#S3DIS specific
+    """extract data from a room folder"""
+    #room_ver = genfromtxt(raw_path, delimiter=' ')
+    room_ver = pd.read_csv(raw_path, sep=' ', header=None).values
+    xyz = np.ascontiguousarray(room_ver[:, 0:3], dtype='float32')
+    try:
+        rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype=
