@@ -189,4 +189,58 @@ def read_s3dis_format(raw_path, label_out=True):
     room_ver = pd.read_csv(raw_path, sep=' ', header=None).values
     xyz = np.ascontiguousarray(room_ver[:, 0:3], dtype='float32')
     try:
-        rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype=
+        rgb = np.ascontiguousarray(room_ver[:, 3:6], dtype='uint8')
+    except ValueError:
+        rgb = np.zeros((room_ver.shape[0],3), dtype='uint8')
+        print('WARN - corrupted rgb data for file %s' % raw_path)
+    if not label_out:
+        return xyz, rgb
+    n_ver = len(room_ver)
+    del room_ver
+    nn = NearestNeighbors(1, algorithm='kd_tree').fit(xyz)
+    room_labels = np.zeros((n_ver,), dtype='uint8')
+    room_object_indices = np.zeros((n_ver,), dtype='uint32')
+    objects = glob.glob(os.path.dirname(raw_path) + "/Annotations/*.txt")
+    i_object = 1
+    for single_object in objects:
+        object_name = os.path.splitext(os.path.basename(single_object))[0]
+        print("        adding object " + str(i_object) + " : "  + object_name)
+        object_class = object_name.split('_')[0]
+        object_label = object_name_to_label(object_class)
+        #obj_ver = genfromtxt(single_object, delimiter=' ')
+        obj_ver = pd.read_csv(single_object, sep=' ', header=None).values
+        distances, obj_ind = nn.kneighbors(obj_ver[:, 0:3])
+        room_labels[obj_ind] = object_label
+        room_object_indices[obj_ind] = i_object
+        i_object = i_object + 1
+
+    return xyz, rgb, room_labels, room_object_indices
+#------------------------------------------------------------------------------
+def read_vkitti_format(raw_path):
+#S3DIS specific
+    """extract data from a room folder"""
+    data = np.load(raw_path)
+    xyz = data[:, 0:3]
+    rgb = data[:, 3:6]
+    labels = data[:, -1]+1
+    labels[(labels==14).nonzero()] = 0
+    return xyz, rgb, labels
+#------------------------------------------------------------------------------
+def object_name_to_label(object_class):
+    """convert from object name in S3DIS to an int"""
+    object_label = {
+        'ceiling': 1,
+        'floor': 2,
+        'wall': 3,
+        'column': 4,
+        'beam': 5,
+        'window': 6,
+        'door': 7,
+        'table': 8,
+        'chair': 9,
+        'bookcase': 10,
+        'sofa': 11,
+        'board': 12,
+        'clutter': 13,
+        'stairs': 0,
+        }.
