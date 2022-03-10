@@ -243,4 +243,44 @@ def object_name_to_label(object_class):
         'board': 12,
         'clutter': 13,
         'stairs': 0,
-        }.
+        }.get(object_class, 0)
+    return object_label
+
+#------------------------------------------------------------------------------
+def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver_batch):
+    """read the format of semantic3d.
+    ver_batch : if ver_batch>0 then load the file ver_batch lines at a time.
+                useful for huge files (> 5millions lines)
+    voxel_width: if voxel_width>0, voxelize data with a regular grid
+    n_class : the number of class; if 0 won't search for labels (test set)
+    implements batch-loading for huge files
+    and pruning"""
+
+    xyz = np.zeros((0, 3), dtype='float32')
+    rgb = np.zeros((0, 3), dtype='uint8')
+    labels = np.zeros((0, n_class+1), dtype='uint32')
+    #---the clouds can potentially be too big to parse directly---
+    #---they are cut in batches in the order they are stored---
+
+    def process_chunk(vertex_chunk, label_chunk, has_labels, xyz, rgb, labels):
+        xyz_full = np.ascontiguousarray(np.array(vertex_chunk.values[:, 0:3], dtype='float32'))
+        rgb_full = np.ascontiguousarray(np.array(vertex_chunk.values[:, 4:7], dtype='uint8'))
+        if has_labels:
+            labels_full = label_chunk.values.squeeze()
+        else:
+            labels_full = None
+        if voxel_width > 0:
+            if has_labels > 0:
+                xyz_sub, rgb_sub, labels_sub, objets_sub = libply_c.prune(xyz_full, voxel_width
+                                             , rgb_full, labels_full , np.zeros(1, dtype='uint8'), n_class, 0)
+                labels = np.vstack((labels, labels_sub))
+                del labels_full
+            else:
+                xyz_sub, rgb_sub, l, o = libply_c.prune(xyz_full, voxel_width
+                                    , rgb_full, np.zeros(1, dtype='uint8'), np.zeros(1, dtype='uint8'), 0,0)
+            xyz = np.vstack((xyz, xyz_sub))
+            rgb = np.vstack((rgb, rgb_sub))
+        else:
+            xyz = xyz_full
+            rgb = xyz_full
+            labe
