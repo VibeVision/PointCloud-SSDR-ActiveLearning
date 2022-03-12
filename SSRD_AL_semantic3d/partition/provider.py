@@ -283,4 +283,46 @@ def read_semantic3d_format(data_file, n_class, file_label_path, voxel_width, ver
         else:
             xyz = xyz_full
             rgb = xyz_full
-            labe
+            labels = labels_full
+        return xyz, rgb, labels
+    if n_class>0:
+        for (i_chunk, (vertex_chunk, label_chunk)) in \
+            enumerate(zip(pd.read_csv(data_file,chunksize=ver_batch, delimiter=' '), \
+                pd.read_csv(file_label_path, dtype="u1",chunksize=ver_batch, header=None))):
+            print("processing lines %d to %d" % (i_chunk * ver_batch, (i_chunk+1) * ver_batch))
+            xyz, rgb, labels = process_chunk(vertex_chunk, label_chunk, 1, xyz, rgb, labels)
+    else:
+        for (i_chunk, vertex_chunk) in enumerate(pd.read_csv(data_file, delimiter=' ',chunksize=ver_batch, header=None)):
+            print("processing lines %d to %d" % (i_chunk * ver_batch, (i_chunk+1) * ver_batch))
+            xyz, rgb, dump = process_chunk(vertex_chunk, None, 0, xyz, rgb, None)
+
+    print("Reading done")
+    if n_class>0:
+        return xyz, rgb, labels
+    else:
+        return xyz, rgb
+#------------------------------------------------------------------------------
+def read_semantic3d_format2(data_file, n_class, file_label_path, voxel_width, ver_batch):
+    """read the format of semantic3d.
+    ver_batch : if ver_batch>0 then load the file ver_batch lines at a time.
+                useful for huge files (> 5millions lines)
+    voxel_width: if voxel_width>0, voxelize data with a regular grid
+    n_class : the number of class; if 0 won't search for labels (test set)
+    implements batch-loading for huge files
+    and pruning"""
+
+    xyz = np.zeros((0, 3), dtype='float32')
+    rgb = np.zeros((0, 3), dtype='uint8')
+    labels = np.zeros((0, n_class+1), dtype='uint32')
+    #---the clouds can potentially be too big to parse directly---
+    #---they are cut in batches in the order they are stored---
+    i_rows = 0
+    while True:
+        try:
+            head = None
+            if ver_batch>0:
+                print("Reading lines %d to %d" % (i_rows, i_rows + ver_batch))
+                vertices = np.genfromtxt(data_file
+                         , delimiter=' ', max_rows=ver_batch
+                         , skip_header=i_rows)
+                #if i_ro
