@@ -325,4 +325,50 @@ def read_semantic3d_format2(data_file, n_class, file_label_path, voxel_width, ve
                 vertices = np.genfromtxt(data_file
                          , delimiter=' ', max_rows=ver_batch
                          , skip_header=i_rows)
-                #if i_ro
+                #if i_rows > 0:
+                #    head = i_rows-1
+                #vertices = pd.read_csv(data_file
+                #         , sep=' ', nrows=ver_batch
+                #         , header=head).values
+
+            else:
+                #vertices = np.genfromtxt(data_file, delimiter=' ')
+                vertices = np.pd.read_csv(data_file, sep=' ', header=None).values
+                break
+
+        except (StopIteration, pd.errors.ParserError):
+            #end of file
+            break
+        if len(vertices)==0:
+            break
+        xyz_full = np.ascontiguousarray(np.array(vertices[:, 0:3], dtype='float32'))
+        rgb_full = np.ascontiguousarray(np.array(vertices[:, 4:7], dtype='uint8'))
+        del vertices
+        if n_class > 0:
+            #labels_full = pd.read_csv(file_label_path, dtype="u1"
+            #             , nrows=ver_batch, header=head).values.squeeze()
+            labels_full = np.genfromtxt(file_label_path, dtype="u1", delimiter=' '
+                            , max_rows=ver_batch, skip_header=i_rows)
+
+        if voxel_width > 0:
+            if n_class > 0:
+                xyz_sub, rgb_sub, labels_sub, objets_sub = libply_c.prune(xyz_full, voxel_width
+                                             , rgb_full, labels_full , np.zeros(1, dtype='uint8'), n_class, 0)
+                labels = np.vstack((labels, labels_sub))
+            else:
+                xyz_sub, rgb_sub, l, o = libply_c.prune(xyz_full, voxel_width
+                                    , rgb_full, np.zeros(1, dtype='uint8'), np.zeros(1, dtype='uint8'), 0,0)
+            del xyz_full, rgb_full
+            xyz = np.vstack((xyz, xyz_sub))
+            rgb = np.vstack((rgb, rgb_sub))
+        i_rows = i_rows + ver_batch
+    print("Reading done")
+    if n_class>0:
+        return xyz, rgb, labels
+    else:
+        return xyz, rgb
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+def read_las(filename):
+    """convert from a las file with no
