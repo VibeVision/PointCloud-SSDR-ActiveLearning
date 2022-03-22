@@ -504,4 +504,46 @@ def read_features(file_name):
     if has_labels:
         labels = np.array(data_file["labels"])
     else:
-        labels
+        labels = []
+    #---fill the arrays---
+    geof = data_file["geof"][:]
+    xyz = data_file["xyz"][:]
+    rgb = data_file["rgb"][:]
+    source = data_file["source"][:]
+    target = data_file["target"][:]
+
+    #---set the graph---
+    graph_nn = dict([("is_nn", True)])
+    graph_nn["source"] = source
+    graph_nn["target"] = target
+    return geof, xyz, rgb, graph_nn, labels
+#------------------------------------------------------------------------------
+def write_spg(file_name, graph_sp, components, in_component):
+    """save the partition and spg information"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    data_file = h5py.File(file_name, 'w')
+    grp = data_file.create_group('components')
+    n_com = len(components)
+    for i_com in range(0, n_com):
+        grp.create_dataset(str(i_com), data=components[i_com], dtype='uint32')
+    data_file.create_dataset('in_component'
+                             , data=in_component, dtype='uint32')
+    data_file.create_dataset('sp_labels'
+                             , data=graph_sp["sp_labels"], dtype='uint32')
+    data_file.create_dataset('sp_centroids'
+                             , data=graph_sp["sp_centroids"], dtype='float32')
+    data_file.create_dataset('sp_length'
+                             , data=graph_sp["sp_length"], dtype='float32')
+    data_file.create_dataset('sp_surface'
+                             , data=graph_sp["sp_surface"], dtype='float32')
+    data_file.create_dataset('sp_volume'
+                             , data=graph_sp["sp_volume"], dtype='float32')
+    data_file.create_dataset('sp_point_count'
+                             , data=graph_sp["sp_point_count"], dtype='uint64')
+    data_file.create_dataset('source'
+                             , data=graph_sp["source"], dtype='uint32')
+    data_file.create_dataset('target'
+                             , data=graph_sp["target"], dtype='uint32')
+    data_file.create_dataset('se_delta_mean'
+                             , data=grap
