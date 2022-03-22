@@ -464,4 +464,44 @@ def write_ply_labels(filename, xyz, rgb, labels):
     vertex_all[prop[6][0]] = labels
     ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
     ply.write(filename)
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
+def write_ply(filename, xyz, rgb):
+    """write into a ply file"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+#------------------------------------------------------------------------------
+def write_features(file_name, geof, xyz, rgb, graph_nn, labels):
+    """write the geometric features, labels and clouds in a h5 file"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    data_file = h5py.File(file_name, 'w')
+    data_file.create_dataset('geof', data=geof, dtype='float32')
+    data_file.create_dataset('source', data=graph_nn["source"], dtype='uint32')
+    data_file.create_dataset('target', data=graph_nn["target"], dtype='uint32')
+    data_file.create_dataset('distances', data=graph_nn["distances"], dtype='float32')
+    data_file.create_dataset('xyz', data=xyz, dtype='float32')
+    if len(rgb) > 0:
+        data_file.create_dataset('rgb', data=rgb, dtype='uint8')
+    if len(labels) > 0 and len(labels.shape)>1 and labels.shape[1]>1:
+        data_file.create_dataset('labels', data=labels, dtype='uint32')
+    else:
+        data_file.create_dataset('labels', data=labels, dtype='uint8')
+    data_file.close()
+#------------------------------------------------------------------------------
+def read_features(file_name):
+    """read the geometric features, clouds and labels from a h5 file"""
+    data_file = h5py.File(file_name, 'r')
+    #fist get the number of vertices
+    n_ver = len(data_file["geof"][:, 0])
+    has_labels = len(data_file["labels"])
+    #the labels can be empty in the case of a test set
+    if has_labels:
+        labels = np.array(data_file["labels"])
+    else:
+        labels
