@@ -416,4 +416,52 @@ def embedding2ply(filename, xyz, embeddings):
 
 
     color = np.array(255 * value, dtype='uint8')
-    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('gr
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = xyz[:, i]
+    for i in range(0, 3):
+        vertex_all[prop[i+3][0]] = color[:, i]
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+
+    ply.write(filename)
+
+#------------------------------------------------------------------------------
+def edge_class2ply2(filename, edg_class, xyz, edg_source, edg_target):
+    """write a ply with edge weight color coded into the midway point"""
+
+    n_edg = len(edg_target)
+
+    midpoint = (xyz[edg_source,]+xyz[edg_target,])/2
+
+    color = np.zeros((edg_source.shape[0],3), dtype = 'uint8')
+    color[edg_class==0,] = [0,0,0]
+    color[(edg_class==1).nonzero(),] = [255,0,0]
+    color[(edg_class==2).nonzero(),] = [125,255,0]
+    color[(edg_class==3).nonzero(),] = [0,125,255]
+
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    vertex_all = np.empty(n_edg, dtype=prop)
+    for i in range(0, 3):
+        vertex_all[prop[i][0]] = np.hstack(midpoint[:, i])
+    for i in range(3, 6):
+        vertex_all[prop[i][0]] = color[:,i-3]
+
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+
+    ply.write(filename)
+
+#------------------------------------------------------------------------------
+def write_ply_labels(filename, xyz, rgb, labels):
+    """write into a ply file. include the label"""
+    prop = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1')
+            , ('blue', 'u1'), ('label', 'u1')]
+    vertex_all = np.empty(len(xyz), dtype=prop)
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop][0]] = xyz[:, i_prop]
+    for i_prop in range(0, 3):
+        vertex_all[prop[i_prop+3][0]] = rgb[:, i_prop]
+    vertex_all[prop[6][0]] = labels
+    ply = PlyData([PlyElement.describe(vertex_all, 'vertex')], text=True)
+    ply.write(filename)
+#-------------------------------------------------------------
