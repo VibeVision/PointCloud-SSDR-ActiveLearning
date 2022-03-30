@@ -576,4 +576,41 @@ def read_spg(file_name):
     graph["se_delta_mean"] = np.array(data_file["se_delta_mean"], dtype='float32')
     graph["se_delta_std"] = np.array(data_file["se_delta_std"], dtype='float32')
     graph["se_delta_norm"] = np.array(data_file["se_delta_norm"], dtype='float32')
-    graph["se_delta_
+    graph["se_delta_centroid"] = np.array(data_file["se_delta_centroid"], dtype='float32')
+    graph["se_length_ratio"] = np.array(data_file["se_length_ratio"], dtype='float32')
+    graph["se_surface_ratio"] = np.array(data_file["se_surface_ratio"], dtype='float32')
+    graph["se_volume_ratio"] = np.array(data_file["se_volume_ratio"], dtype='float32')
+    graph["se_point_count_ratio"] = np.array(data_file["se_point_count_ratio"], dtype='float32')
+    in_component = np.array(data_file["in_component"], dtype='uint32')
+    n_com = len(graph["sp_length"])
+    graph["sp_labels"] = np.array(data_file["sp_labels"], dtype='uint32')
+    grp = data_file['components']
+    components = np.empty((n_com,), dtype=object)
+    for i_com in range(0, n_com):
+        components[i_com] = np.array(grp[str(i_com)], dtype='uint32').tolist()
+    return graph, components, in_component
+#------------------------------------------------------------------------------
+def reduced_labels2full(labels_red, components, n_ver):
+    """distribute the labels of superpoints to their repsective points"""
+    labels_full = np.zeros((n_ver, ), dtype='uint8')
+    for i_com in range(0, len(components)):
+        labels_full[components[i_com]] = labels_red[i_com]
+    return labels_full
+#------------------------------------------------------------------------------
+def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
+    """interpolate the labels of the pruned cloud to the full cloud"""
+    if len(labels.shape) > 1 and labels.shape[1] > 1:
+        labels = np.argmax(labels, axis = 1)
+    i_rows = None
+    labels_f = np.zeros((0, ), dtype='uint8')
+    #---the clouds can potentially be too big to parse directly---
+    #---they are cut in batches in the order they are stored---
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(xyz)
+    while True:
+        try:
+            if ver_batch>0:
+                if i_rows is None:
+                    print("read lines %d to %d" % (0, ver_batch))
+                else:
+                    print("read lines %d to %d" % (i_rows, i_rows + ver_batch))
+                #vertices = 
