@@ -613,4 +613,50 @@ def interpolate_labels_batch(data_file, xyz, labels, ver_batch):
                     print("read lines %d to %d" % (0, ver_batch))
                 else:
                     print("read lines %d to %d" % (i_rows, i_rows + ver_batch))
-                #vertices = 
+                #vertices = np.genfromtxt(data_file
+                #         , delimiter=' ', max_rows=ver_batch
+                #        , skip_header=i_rows)
+                vertices = pd.read_csv(data_file
+                         , sep=' ', nrows=ver_batch
+                         , header=None if i_rows==None else i_rows-1).values
+            else:
+                #vertices = np.genfromtxt(data_file
+                 #        , delimiter=' ')
+                vertices = pd.read_csv(data_file
+                         , delimiter=' ', header=None).values
+                break
+        except (StopIteration, pd.errors.ParserError):
+            #end of file
+            break
+        if len(vertices)==0:
+            break
+        xyz_full = np.array(vertices[:, 0:3], dtype='float32')
+        del vertices
+        distances, neighbor = nn.kneighbors(xyz_full)
+        del distances
+        labels_f = np.hstack((labels_f, labels[neighbor].flatten()))
+        if i_rows is None:
+            i_rows = ver_batch
+        else:
+            i_rows = i_rows + ver_batch
+    return labels_f
+#------------------------------------------------------------------------------
+def interpolate_labels(xyz_up, xyz, labels, ver_batch):
+    """interpolate the labels of the pruned cloud to the full cloud"""
+    if len(labels.shape) > 1 and labels.shape[1] > 1:
+        labels = np.argmax(labels, axis = 1)
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(xyz)
+    distances, neighbor = nn.kneighbors(xyz_up)
+    return labels[neighbor].flatten()
+#------------------------------------------------------------------------------
+def perfect_prediction(components, labels):
+    """assign each partition with the majority label"""
+    full_pred = np.zeros((labels.shape[0],),dtype='uint32')
+    for i_com in range(len(components)):
+        label_com = labels[components[i_com],1:].sum(0).argmax()
+        full_pred[components[i_com]]=label_com
+    return full_pred
+#----------------------------------------------------
+#SEAL utilities
+
+def compute_gt_connected_components(n_ver, edg_source, edg_
