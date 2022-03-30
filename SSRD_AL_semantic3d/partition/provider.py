@@ -659,4 +659,30 @@ def perfect_prediction(components, labels):
 #----------------------------------------------------
 #SEAL utilities
 
-def compute_gt_connected_components(n_ver, edg_source, edg_
+def compute_gt_connected_components(n_ver, edg_source, edg_target, is_transition, cutoff):
+    components, in_component = libcp.connected_comp(n_ver,
+                                                  edg_source.astype('uint32'),
+                                                  edg_target.astype('uint32'),
+                                                  is_transition.astype('uint8'), 40) #rough guess
+    return components, in_component
+#----------------------
+def write_gt_connected_components(file_name, components, in_component):
+    """save the label-based connected components of the ground truth"""
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    data_file = h5py.File(file_name, 'w')
+    grp = data_file.create_group('components')
+    for i_com in range(len(components)):
+        grp.create_dataset(str(i_com), data=components[i_com], dtype='uint32')
+    data_file.create_dataset('in_component', data=in_component, dtype='uint32')
+#-------------------------------------
+
+def read_gt_connected_components(file_name):
+    """read the label-based connected components of the ground truth"""
+    data_file = h5py.File(file_name, 'r')
+    in_component = np.array(data_file["in_component"], dtype='uint32')
+    n_com = np.amax(in_component)
+    components = np.empty((n_com,), dtype=object)
+    for i_com in range(0, n_com):
+        components[i_com] = np.array(grp[str(i_com)], dtype='uint32').tolist()
+    return components, in_component
