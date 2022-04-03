@@ -58,4 +58,11 @@ for file in files:
     print(str(i_file) + " / " + str(n_files) + "---> "+file_name_short)
     print("    reading the subsampled file...")
     geof, xyz, rgb, graph_nn, l = read_features(fea_file)
-    gr
+    graph_sp, components, in_component = read_spg(spg_file)
+    n_ver = xyz.shape[0]
+    del geof, rgb, graph_nn, l, graph_sp
+    labels_red = np.array(res_file.get(area + file_name_short))
+    print("    upsampling...")
+    labels_full = reduced_labels2full(labels_red, components, n_ver)
+    labels_ups = interpolate_labels_batch(data_file, xyz, labels_full, args.ver_batch)
+    np.savetxt(label_file, labels_ups+1, delimiter=' ', fmt='%d')   # X is an array
