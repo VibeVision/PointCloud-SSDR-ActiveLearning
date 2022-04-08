@@ -300,3 +300,6 @@ class Semantic3D_Dataset_Sampling(Dataset):
     def __getitem__(self, idx):
         cloud_name = self.input_cloud_names[idx]
         input_activation, input_pseudo, input_tree, input_color, input_label = self.load_data(cloud_name)
+        batch_xyz, batch_features, batch_labels, batch_activation, batch_pseudo, batch_pc_idx, batch_cloud_idx = self.spatially_regular_gen(input_activation, input_pseudo, input_tree, input_color, input_label, idx)
+        input_list = self.tf_map(batch_xyz, batch_features, batch_labels, batch_activation, batch_pseudo, batch_pc_idx, batch_cloud_idx)
+        return input_list
