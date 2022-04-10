@@ -35,4 +35,35 @@ if __name__ == '__main__':
             xyzrgb = np.concatenate([points, colors], axis=-1)
             Plot.draw_pc(xyzrgb)  # visualize raw point clouds
             Plot.draw_pc_sem_ins(points, labels)  # visualize ground-truth
-      
+            Plot.draw_pc_sem_ins(points, pred)  # visualize prediction
+
+        correct = np.sum(pred == labels)
+        print(str(file_name.split('/')[-1][:-4]) + '_acc:' + str(correct / float(len(labels))))
+        test_total_correct += correct
+        test_total_seen += len(labels)
+
+        for j in range(len(labels)):
+            gt_l = int(labels[j])
+            pred_l = int(pred[j])
+            gt_classes[gt_l] += 1.0
+            positive_classes[pred_l] += 1.0
+            true_positive_classes[gt_l] += int(gt_l == pred_l)
+
+    iou_list = []
+    for n in range(13):
+        mu = float(gt_classes[n] + positive_classes[n] - true_positive_classes[n])
+        if mu == 0.0:
+            mu = 1.0
+        iou = true_positive_classes[n] / mu
+        iou_list.append(iou)
+    mean_iou = sum(iou_list) / 13.0
+    print('eval accuracy: {}'.format(test_total_correct / float(test_total_seen)))
+    print('mean IOU:{}'.format(mean_iou))
+    print(iou_list)
+
+    acc_list = []
+    for n in range(13):
+        acc = true_positive_classes[n] / float(gt_classes[n])
+        acc_list.append(acc)
+    mean_acc = sum(acc_list) / 13.0
+    print('mAcc value is :{}'.format(mean_acc))
