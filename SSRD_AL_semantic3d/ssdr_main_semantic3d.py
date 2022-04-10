@@ -134,4 +134,16 @@ if __name__ == '__main__':
                 labeling_region_num = w["sp_num"] + w["split_sp_num"]
                 labeling_point_num = w["p_num"] + w["sub_p_num"]
                 log_out("round= " + str(r) + " |                labeling mean point=" + str(
-                    labeling_point_num / lab
+                    labeling_point_num / labeling_region_num) + get_w(w) + ", costTime=" + str(time.time() - begin_time),
+                        round_result_file)
+
+            begin_time = time.time()
+            best_miou, best_OA = model.train2(round_num=r)
+
+            log_out("round= " + str(r) + " | best_miou= " + str(best_miou) + ", best_OA= " + str(best_OA) +", costTime=" + str(time.time()-begin_time), round_result_file)
+
+        model.close()
+        round_result_file.close()
+    else:
+        print("round_num must >= 2", "round_num="+str(round_num))
+
