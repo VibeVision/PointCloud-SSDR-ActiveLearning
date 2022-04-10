@@ -94,4 +94,44 @@ if __name__ == '__main__':
             sampler_args.append(point_uncertainty_mode)
 
             if classbal == 1:
-                sampler_args.appen
+                sampler_args.append("classbal")
+            elif classbal == 2:
+                sampler_args.append("clsbal")
+            # if distance == 1:
+            #     sampler_args.append("distance")
+            if edcd == 1:
+                sampler_args.append("edcd")
+            if gcn:
+                sampler_args.append("gcn")
+            if gcn_fps:
+                sampler_args.append("gcn_fps")
+
+            sampler_args.append(uncertainty_mode)
+            sampler_args.append(oracle_mode)
+            sampler_args.append(str(threshold))
+            sampler_args.append(str(min_size))
+
+            Sampler = TSampler(input_path="data/" + dataset_name + "/" + input_, data_path="data/" + dataset_name+ "/" + str(reg_strength), total_num=total_sp_num,
+                               test_area_idx=test_area, sampler_args=sampler_args, reg_strength=reg_strength, min_size=min_size, dataset_name=dataset_name)
+
+        round_result_file = open(os.path.join("record_round", dataset_name + "_" + str(test_area) + "_" + get_sampler_args_str(sampler_args) + "_" + str(reg_strength) + '.txt'), 'a')
+
+        # sp_batch_size = int(math.ceil(total_sp_num * 3.0 / 100))
+
+        sp_batch_size = 10000
+
+        model = Network(cfg, dataset_name, sampler_args, test_area, reg_strength=reg_strength)
+        model.restore_model(round_num=round_num - 1)
+        for r in range(round_num, 34):
+            begin_time = time.time()
+            w = {"sp_num": 0, "p_num": 0, "p_num_list": [], "sp_id_list": [], "sub_num": 0,
+                 "sub_p_num": 0, "ignore_sp_num": 0, "split_sp_num": 0}
+            #if r == 2 and "gcn_fps" in sampler_args and "NAIL" in sampler_args:
+            #    pass
+            #else:
+            if True:
+                Sampler.sampling(model=model, batch_size=sp_batch_size, last_round=r-1, w=w, threshold=threshold, gcn_gpu=1)
+                labeling_region_num = w["sp_num"] + w["split_sp_num"]
+                labeling_point_num = w["p_num"] + w["sub_p_num"]
+                log_out("round= " + str(r) + " |                labeling mean point=" + str(
+                    labeling_point_num / lab
