@@ -36,4 +36,62 @@ if __name__ == '__main__':
                         help='t, multiple run')
 
     parser.add_argument('--gcn', default=0, type=int,
-           
+                        help='0: dont use gcn; 1: use gcn')
+
+    parser.add_argument('--gcn_fps', default=0, type=int,
+                        help='0: dont use gcn_fps; 1: use gcn_fps')
+
+    FLAGS = parser.parse_args()
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(FLAGS.gpu)
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # '2'
+    sampler_name = FLAGS.sampler
+    dataset_name = FLAGS.dataset
+    test_area = FLAGS.test_area
+    round_num = FLAGS.round
+    classbal = FLAGS.classbal
+    distance = FLAGS.distance
+    uncertainty_mode = FLAGS.uncertainty_mode
+    oracle_mode = FLAGS.oracle_mode
+    t = "t"+str(FLAGS.t)
+    gcn = FLAGS.gcn
+    gcn_fps = FLAGS.gcn_fps
+
+    reg_strength = FLAGS.reg_strength
+    point_uncertainty_mode = FLAGS.point_uncertainty_mode
+
+    threshold = FLAGS.threshold
+    min_size = FLAGS.min_size
+    edcd = FLAGS.edcd
+
+    if round_num >= 2:
+        if dataset_name == "semantic3d":
+            input_ = "input_0.060"
+            test_area = 0
+            cfg = ConfigSemantic3D
+
+        with open(os.path.join("data", dataset_name, str(reg_strength), "superpoint/total.pkl"), "rb") as f:
+            total_obj = pickle.load(f)
+        total_sp_num = total_obj["sp_num"]
+
+        print("total_sp_num", total_sp_num)
+
+        sampler_args = []
+
+        if sampler_name == "random":
+            sampler_args.append(t)
+            sampler_args.append(sampler_name)
+            sampler_args.append(oracle_mode)
+            sampler_args.append(str(threshold))
+            sampler_args.append(str(min_size))
+
+            Sampler = RandomSampler(input_path="data/" + dataset_name + "/" + input_, data_path="data/" + dataset_name+ "/" + str(reg_strength),
+                                    total_num=total_sp_num, sampler_args=sampler_args, min_size=min_size)
+
+        elif sampler_name == "T":
+            sampler_args.append(t)
+            sampler_args.append(point_uncertainty_mode)
+
+            if classbal == 1:
+                sampler_args.appen
