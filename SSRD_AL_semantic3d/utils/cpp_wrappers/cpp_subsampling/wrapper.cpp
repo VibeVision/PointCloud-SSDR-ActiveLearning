@@ -103,4 +103,72 @@ static PyObject *grid_subsampling_compute(PyObject *self, PyObject *args, PyObje
 	if (use_feature)
 		features_array = PyArray_FROM_OTF(features_obj, NPY_FLOAT, NPY_IN_ARRAY);
 	if (use_classes)
-		classes_array = PyArray_FROM_OT
+		classes_array = PyArray_FROM_OTF(classes_obj, NPY_INT, NPY_IN_ARRAY);
+
+	// Verify data was load correctly.
+	if (points_array == NULL)
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Error converting input points to numpy arrays of type float32");
+		return NULL;
+	}
+	if (use_feature && features_array == NULL)
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Error converting input features to numpy arrays of type float32");
+		return NULL;
+	}
+	if (use_classes && classes_array == NULL)
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Error converting input classes to numpy arrays of type int32");
+		return NULL;
+	}
+
+    // Check that the input array respect the dims
+	if ((int)PyArray_NDIM(points_array) != 2 || (int)PyArray_DIM(points_array, 1) != 3)
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Wrong dimensions : points.shape is not (N, 3)");
+		return NULL;
+	}
+	if (use_feature && ((int)PyArray_NDIM(features_array) != 2))
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Wrong dimensions : features.shape is not (N, d)");
+		return NULL;
+	}
+
+	if (use_classes && (int)PyArray_NDIM(classes_array) > 2)
+	{
+		Py_XDECREF(points_array);
+		Py_XDECREF(classes_array);
+		Py_XDECREF(features_array);
+		PyErr_SetString(PyExc_RuntimeError, "Wrong dimensions : classes.shape is not (N,) or (N, d)");
+		return NULL;
+	}
+
+	// Number of points
+	int N = (int)PyArray_DIM(points_array, 0);
+
+	// Dimension of the features
+	int fdim = 0;
+	if (use_feature)
+	    fdim = (int)PyArray_DIM(features_array, 1);
+
+	//Dimension of labels
+	int ldim = 1;
+	if (use_classes && (int)PyArray_NDIM(classes_array) == 2)
+	    ldim = (int)PyArray_DIM(classes_array, 1);
+
+	// Check that the input array 
