@@ -235,4 +235,52 @@ static PyObject *grid_subsampling_compute(PyObject *self, PyObject *args, PyObje
 	npy_intp* point_dims = new npy_intp[2];
 	point_dims[0] = subsampled_points.size();
 	point_dims[1] = 3;
-	npy_intp* feature_dims = new npy_intp[2
+	npy_intp* feature_dims = new npy_intp[2];
+	feature_dims[0] = subsampled_points.size();
+	feature_dims[1] = fdim;
+	npy_intp* classes_dims = new npy_intp[2];
+	classes_dims[0] = subsampled_points.size();
+	classes_dims[1] = ldim;
+
+    // Create output array
+	PyObject *res_points_obj = PyArray_SimpleNew(2, point_dims, NPY_FLOAT);
+	PyObject *res_features_obj = NULL;
+	PyObject *res_classes_obj = NULL;
+	PyObject *ret = NULL;
+
+	// Fill output array with values
+	size_t size_in_bytes = subsampled_points.size() * 3 * sizeof(float);
+	memcpy(PyArray_DATA(res_points_obj), subsampled_points.data(), size_in_bytes);
+	if (use_feature)
+	{
+	    size_in_bytes = subsampled_points.size() * fdim * sizeof(float);
+		res_features_obj = PyArray_SimpleNew(2, feature_dims, NPY_FLOAT);
+		memcpy(PyArray_DATA(res_features_obj), subsampled_features.data(), size_in_bytes);
+	}
+	if (use_classes)
+	{
+		size_in_bytes = subsampled_points.size() * ldim * sizeof(int);
+		res_classes_obj = PyArray_SimpleNew(2, classes_dims, NPY_INT);
+		memcpy(PyArray_DATA(res_classes_obj), subsampled_classes.data(), size_in_bytes);
+	}
+
+
+	// Merge results
+	if (use_feature && use_classes)
+		ret = Py_BuildValue("NNN", res_points_obj, res_features_obj, res_classes_obj);
+	else if (use_feature)
+		ret = Py_BuildValue("NN", res_points_obj, res_features_obj);
+	else if (use_classes)
+		ret = Py_BuildValue("NN", res_points_obj, res_classes_obj);
+	else
+		ret = Py_BuildValue("N", res_points_obj);
+
+    // Clean up
+    // ********
+
+	Py_DECREF(points_array);
+	Py_XDECREF(features_array);
+	Py_XDECREF(classes_array);
+
+	return ret;
+}
