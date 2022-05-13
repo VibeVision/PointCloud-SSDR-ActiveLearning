@@ -40,4 +40,18 @@ wget -c -N http://semantic3d.net/data/point-clouds/testing1/stgallencathedral_st
 wget -c -N http://semantic3d.net/data/point-clouds/testing2/MarketplaceFeldkirch_Station4_rgb_intensity-reduced.txt.7z -P $BASE_DIR
 wget -c -N http://semantic3d.net/data/point-clouds/testing2/StGallenCathedral_station6_rgb_intensity-reduced.txt.7z -P $BASE_DIR
 wget -c -N http://semantic3d.net/data/point-clouds/testing2/sg27_station10_rgb_intensity-reduced.txt.7z -P $BASE_DIR
-wget -c -N http://semantic3d.net/data/point-clouds/testi
+wget -c -N http://semantic3d.net/data/point-clouds/testing2/sg28_Station2_rgb_intensity-reduced.txt.7z -P $BASE_DIR
+
+
+
+for entry in "$BASE_DIR"/*
+do
+  7z x "$entry" -o$(dirname "$entry") -y
+done
+
+mv $BASE_DIR/station1_xyz_intensity_rgb.txt $BASE_DIR/neugasse_station1_xyz_intensity_rgb.txt
+
+#for entry in "$BASE_DIR"/*.7z
+#do
+#  rm "$entry"
+#done
