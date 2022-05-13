@@ -66,4 +66,11 @@ if True:
 
         search_tree = KDTree(sub_xyz, leaf_size=50)
         kd_tree_file = join(sub_pc_folder, cloud_name + '_KDTree.pkl')
-      
+        with open(kd_tree_file, 'wb') as f:
+            pickle.dump(search_tree, f)
+
+        proj_idx = np.squeeze(search_tree.query(points, return_distance=False))
+        proj_idx = proj_idx.astype(np.int32)
+        proj_save = join(sub_pc_folder, cloud_name + '_proj.pkl')
+        with open(proj_save, 'wb') as f:
+            pickle.dump([proj_idx, labels], f)
