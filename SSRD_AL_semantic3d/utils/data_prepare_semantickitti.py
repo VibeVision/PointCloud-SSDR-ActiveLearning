@@ -75,3 +75,4 @@ for seq_id in seq_list:
             with open(KDTree_save, 'wb') as f:
                 pickle.dump(search_tree, f)
             with open(proj_save, 'wb') as f:
+                pickle.dump([proj_inds], f)
