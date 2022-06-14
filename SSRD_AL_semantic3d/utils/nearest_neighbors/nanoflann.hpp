@@ -66,4 +66,74 @@ namespace nanoflann
 
 
                 /**
-                 * Called during search to add an e
+                 * Called during search to add an element matching the criteria.
+                 * @return true if the search should be continued, false if the results are sufficient
+                 */
+                inline bool addPoint(DistanceType dist, IndexType index)
+		{
+			CountType i;
+			for (i = count; i > 0; --i) {
+#ifdef NANOFLANN_FIRST_MATCH   // If defined and two points have the same distance, the one with the lowest-index will be returned first.
+				if ( (dists[i-1] > dist) || ((dist == dists[i-1]) && (indices[i-1] > index)) ) {
+#else
+				if (dists[i-1] > dist) {
+#endif
+					if (i < capacity) {
+						dists[i] = dists[i-1];
+						indices[i] = indices[i-1];
+					}
+				}
+				else break;
+			}
+			if (i < capacity) {
+				dists[i] = dist;
+				indices[i] = index;
+			}
+			if (count < capacity) count++;
+
+                        // tell caller that the search shall continue
+                        return true;
+		}
+
+		inline DistanceType worstDist() const
+		{
+			return dists[capacity-1];
+		}
+	};
+
+	/** operator "<" for std::sort() */
+	struct IndexDist_Sorter
+	{
+		/** PairType will be typically: std::pair<IndexType,DistanceType> */
+		template <typename PairType>
+		inline bool operator()(const PairType &p1, const PairType &p2) const {
+			return p1.second < p2.second;
+		}
+	};
+
+	/**
+	 * A result-set class used when performing a radius based search.
+	 */
+	template <typename DistanceType, typename IndexType = size_t>
+	class RadiusResultSet
+	{
+	public:
+		const DistanceType radius;
+
+		std::vector<std::pair<IndexType, DistanceType> > &m_indices_dists;
+
+		inline RadiusResultSet(DistanceType radius_, std::vector<std::pair<IndexType,DistanceType> > &indices_dists) : radius(radius_), m_indices_dists(indices_dists)
+		{
+			init();
+		}
+
+		inline void init() { clear(); }
+		inline void clear() { m_indices_dists.clear(); }
+
+		inline size_t size() const { return m_indices_dists.size(); }
+
+		inline bool full() const { return true; }
+
+                /**
+                 * Called during search to add an element matching the criteria.
+            
