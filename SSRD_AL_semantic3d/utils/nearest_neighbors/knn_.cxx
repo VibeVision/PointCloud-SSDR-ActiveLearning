@@ -234,3 +234,39 @@ void cpp_knn_batch_distance_pick_omp(const float* batch_data, const size_t batch
 						possible_ids.push_back(i);
 					}
 				}
+				if(possible_ids.size() == 0){
+					current_id = *std::min_element(std::begin(used), std::end(used));
+				}
+			}
+
+			// get an index
+			size_t index = possible_ids[mt_rand()%possible_ids.size()];
+
+			// create the query
+			vector<float> query(3);
+			for(size_t i=0; i<dim; i++){
+				query[i] = batch_data[bid*npts*dim+index*dim+i];
+			}
+			// get the indices
+			std::vector<float> dists(K);
+			std::vector<size_t> ids(K);
+			nanoflann::KNNResultSet<float> resultSet(K);
+			resultSet.init(&ids[0], &dists[0] );
+			tree.index->findNeighbors(resultSet, &query[0], nanoflann::SearchParams(10));
+
+			for(size_t i=0; i<K; i++){
+				used[ids[i]] ++;
+			}
+			used[index] += 100;
+
+			// fill the queries and neighborhoods
+			for(size_t i=0; i<K; i++){
+				batch_indices[bid*nqueries*K+ptid*K+i] = ids[i];
+			}
+			for(size_t i=0; i<dim; i++){
+				batch_queries[bid*nqueries*dim+ptid*dim+i] = query[i];
+			}
+		}
+	}
+
+}
