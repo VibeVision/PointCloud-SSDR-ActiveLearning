@@ -136,4 +136,69 @@ namespace nanoflann
 
                 /**
                  * Called during search to add an element matching the criteria.
-            
+                 * @return true if the search should be continued, false if the results are sufficient
+                 */
+                inline bool addPoint(DistanceType dist, IndexType index)
+		{
+			if (dist < radius)
+				m_indices_dists.push_back(std::make_pair(index, dist));
+                        return true;
+		}
+
+		inline DistanceType worstDist() const { return radius; }
+
+		/**
+		 * Find the worst result (furtherest neighbor) without copying or sorting
+		 * Pre-conditions: size() > 0
+		 */
+		std::pair<IndexType,DistanceType> worst_item() const
+		{
+		   if (m_indices_dists.empty()) throw std::runtime_error("Cannot invoke RadiusResultSet::worst_item() on an empty list of results.");
+		   typedef typename std::vector<std::pair<IndexType, DistanceType> >::const_iterator DistIt;
+		   DistIt it = std::max_element(m_indices_dists.begin(), m_indices_dists.end(), IndexDist_Sorter());
+		   return *it;
+		}
+	};
+
+
+	/** @} */
+
+
+	/** @addtogroup loadsave_grp Load/save auxiliary functions
+	  * @{ */
+	template<typename T>
+	void save_value(FILE* stream, const T& value, size_t count = 1)
+	{
+		fwrite(&value, sizeof(value), count, stream);
+	}
+
+	template<typename T>
+	void save_value(FILE* stream, const std::vector<T>& value)
+	{
+		size_t size = value.size();
+		fwrite(&size, sizeof(size_t), 1, stream);
+		fwrite(&value[0], sizeof(T), size, stream);
+	}
+
+	template<typename T>
+	void load_value(FILE* stream, T& value, size_t count = 1)
+	{
+		size_t read_cnt = fread(&value, sizeof(value), count, stream);
+		if (read_cnt != count) {
+			throw std::runtime_error("Cannot read from file");
+		}
+	}
+
+
+	template<typename T>
+	void load_value(FILE* stream, std::vector<T>& value)
+	{
+		size_t size;
+		size_t read_cnt = fread(&size, sizeof(size_t), 1, stream);
+		if (read_cnt != 1) {
+			throw std::runtime_error("Cannot read from file");
+		}
+		value.resize(size);
+		read_cnt = fread(&value[0], sizeof(T), size, stream);
+		if (read_cnt != size) {
+			throw std::runtime_error("Cannot read from 
