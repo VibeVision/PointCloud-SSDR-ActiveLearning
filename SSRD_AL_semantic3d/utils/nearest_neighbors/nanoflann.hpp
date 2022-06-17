@@ -201,4 +201,66 @@ namespace nanoflann
 		value.resize(size);
 		read_cnt = fread(&value[0], sizeof(T), size, stream);
 		if (read_cnt != size) {
-			throw std::runtime_error("Cannot read from 
+			throw std::runtime_error("Cannot read from file");
+		}
+	}
+	/** @} */
+
+
+	/** @addtogroup metric_grp Metric (distance) classes
+	  * @{ */
+
+	struct Metric
+	{
+	};
+
+	/** Manhattan distance functor (generic version, optimized for high-dimensionality data sets).
+	  *  Corresponding distance traits: nanoflann::metric_L1
+	  * \tparam T Type of the elements (e.g. double, float, uint8_t)
+	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double, int64_t)
+	  */
+	template<class T, class DataSource, typename _DistanceType = T>
+	struct L1_Adaptor
+	{
+		typedef T ElementType;
+		typedef _DistanceType DistanceType;
+
+		const DataSource &data_source;
+
+		L1_Adaptor(const DataSource &_data_source) : data_source(_data_source) { }
+
+		inline DistanceType evalMetric(const T* a, const size_t b_idx, size_t size, DistanceType worst_dist = -1) const
+		{
+			DistanceType result = DistanceType();
+			const T* last = a + size;
+			const T* lastgroup = last - 3;
+			size_t d = 0;
+
+			/* Process 4 items with each loop for efficiency. */
+			while (a < lastgroup) {
+				const DistanceType diff0 = std::abs(a[0] - data_source.kdtree_get_pt(b_idx,d++));
+				const DistanceType diff1 = std::abs(a[1] - data_source.kdtree_get_pt(b_idx,d++));
+				const DistanceType diff2 = std::abs(a[2] - data_source.kdtree_get_pt(b_idx,d++));
+				const DistanceType diff3 = std::abs(a[3] - data_source.kdtree_get_pt(b_idx,d++));
+				result += diff0 + diff1 + diff2 + diff3;
+				a += 4;
+				if ((worst_dist > 0) && (result > worst_dist)) {
+					return result;
+				}
+			}
+			/* Process last 0-3 components.  Not needed for standard vector lengths. */
+			while (a < last) {
+				result += std::abs( *a++ - data_source.kdtree_get_pt(b_idx, d++) );
+			}
+			return result;
+		}
+
+		template <typename U, typename V>
+		inline DistanceType accum_dist(const U a, const V b, int ) const
+		{
+			return std::abs(a-b);
+		}
+	};
+
+	/** Squared Euclidean distance functor (generic version, optimized for high-dimensionality data sets).
+	  *  Corresponding
