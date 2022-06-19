@@ -263,4 +263,58 @@ namespace nanoflann
 	};
 
 	/** Squared Euclidean distance functor (generic version, optimized for high-dimensionality data sets).
-	  *  Corresponding
+	  *  Corresponding distance traits: nanoflann::metric_L2
+	  * \tparam T Type of the elements (e.g. double, float, uint8_t)
+	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double, int64_t)
+	  */
+	template<class T, class DataSource, typename _DistanceType = T>
+	struct L2_Adaptor
+	{
+		typedef T ElementType;
+		typedef _DistanceType DistanceType;
+
+		const DataSource &data_source;
+
+		L2_Adaptor(const DataSource &_data_source) : data_source(_data_source) { }
+
+		inline DistanceType evalMetric(const T* a, const size_t b_idx, size_t size, DistanceType worst_dist = -1) const
+		{
+			DistanceType result = DistanceType();
+			const T* last = a + size;
+			const T* lastgroup = last - 3;
+			size_t d = 0;
+
+			/* Process 4 items with each loop for efficiency. */
+			while (a < lastgroup) {
+				const DistanceType diff0 = a[0] - data_source.kdtree_get_pt(b_idx,d++);
+				const DistanceType diff1 = a[1] - data_source.kdtree_get_pt(b_idx,d++);
+				const DistanceType diff2 = a[2] - data_source.kdtree_get_pt(b_idx,d++);
+				const DistanceType diff3 = a[3] - data_source.kdtree_get_pt(b_idx,d++);
+				result += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
+				a += 4;
+				if ((worst_dist > 0) && (result > worst_dist)) {
+					return result;
+				}
+			}
+			/* Process last 0-3 components.  Not needed for standard vector lengths. */
+			while (a < last) {
+				const DistanceType diff0 = *a++ - data_source.kdtree_get_pt(b_idx, d++);
+				result += diff0 * diff0;
+			}
+			return result;
+		}
+
+		template <typename U, typename V>
+		inline DistanceType accum_dist(const U a, const V b, int ) const
+		{
+			return (a - b) * (a - b);
+		}
+	};
+
+	/** Squared Euclidean (L2) distance functor (suitable for low-dimensionality datasets, like 2D or 3D point clouds)
+	  *  Corresponding distance traits: nanoflann::metric_L2_Simple
+	  * \tparam T Type of the elements (e.g. double, float, uint8_t)
+	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double, int64_t)
+	  */
+	template<class T, class DataSource, typename _DistanceType = T>
+	struct L2_Simple_Adapto
