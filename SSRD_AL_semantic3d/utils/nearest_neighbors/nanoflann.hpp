@@ -317,4 +317,71 @@ namespace nanoflann
 	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double, int64_t)
 	  */
 	template<class T, class DataSource, typename _DistanceType = T>
-	struct L2_Simple_Adapto
+	struct L2_Simple_Adaptor
+	{
+		typedef T ElementType;
+		typedef _DistanceType DistanceType;
+
+		const DataSource &data_source;
+
+		L2_Simple_Adaptor(const DataSource &_data_source) : data_source(_data_source) { }
+
+		inline DistanceType evalMetric(const T* a, const size_t b_idx, size_t size) const {
+			DistanceType result = DistanceType();
+			for (size_t i = 0; i < size; ++i) {
+				const DistanceType diff = a[i] - data_source.kdtree_get_pt(b_idx, i);
+				result += diff * diff;
+			}
+			return result;
+		}
+
+		template <typename U, typename V>
+		inline DistanceType accum_dist(const U a, const V b, int ) const
+		{
+			return (a - b) * (a - b);
+		}
+	};
+
+	/** SO2 distance functor
+	  *  Corresponding distance traits: nanoflann::metric_SO2
+	  * \tparam T Type of the elements (e.g. double, float)
+	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double)
+	  * orientation is constrained to be in [-pi, pi]
+	  */
+	template<class T, class DataSource, typename _DistanceType = T>
+	struct SO2_Adaptor
+	{
+		typedef T ElementType;
+		typedef _DistanceType DistanceType;
+
+		const DataSource &data_source;
+
+		SO2_Adaptor(const DataSource &_data_source) : data_source(_data_source) { }
+
+		inline DistanceType evalMetric(const T* a, const size_t b_idx, size_t size) const {
+			return accum_dist(a[size-1], data_source.kdtree_get_pt(b_idx, size - 1) , size - 1);
+		}
+
+		template <typename U, typename V>
+		inline DistanceType accum_dist(const U a, const V b, int ) const
+		{
+			DistanceType result = DistanceType();
+			result = b - a;
+			if (result > M_PI)
+				result -= 2. * M_PI;
+			else if (result < -M_PI)
+				result += 2. * M_PI;
+			return result;
+		}
+	};
+
+	/** SO3 distance functor (Uses L2_Simple)
+	  *  Corresponding distance traits: nanoflann::metric_SO3
+	  * \tparam T Type of the elements (e.g. double, float)
+	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double)
+	  */
+	template<class T, class DataSource, typename _DistanceType = T>
+	struct SO3_Adaptor
+	{
+		typedef T ElementType;
+		typedef _DistanceType D
