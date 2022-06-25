@@ -384,4 +384,80 @@ namespace nanoflann
 	struct SO3_Adaptor
 	{
 		typedef T ElementType;
-		typedef _DistanceType D
+		typedef _DistanceType DistanceType;
+
+		L2_Simple_Adaptor<T, DataSource > distance_L2_Simple;
+
+		SO3_Adaptor(const DataSource &_data_source) : distance_L2_Simple(_data_source) { }
+
+		inline DistanceType evalMetric(const T* a, const size_t b_idx, size_t size) const {
+			return distance_L2_Simple.evalMetric(a, b_idx, size);
+		}
+
+		template <typename U, typename V>
+		inline DistanceType accum_dist(const U a, const V b, int idx) const
+		{
+			return distance_L2_Simple.accum_dist(a, b, idx);
+		}
+	};
+
+	/** Metaprogramming helper traits class for the L1 (Manhattan) metric */
+	struct metric_L1 : public Metric
+	{
+		template<class T, class DataSource>
+		struct traits {
+			typedef L1_Adaptor<T, DataSource> distance_t;
+		};
+	};
+	/** Metaprogramming helper traits class for the L2 (Euclidean) metric */
+	struct metric_L2 : public Metric 
+	{
+		template<class T, class DataSource>
+		struct traits {
+			typedef L2_Adaptor<T, DataSource> distance_t;
+		};
+	};
+	/** Metaprogramming helper traits class for the L2_simple (Euclidean) metric */
+	struct metric_L2_Simple : public Metric
+	{
+		template<class T, class DataSource>
+		struct traits {
+			typedef L2_Simple_Adaptor<T, DataSource> distance_t;
+		};
+	};
+	/** Metaprogramming helper traits class for the SO3_InnerProdQuat metric */
+	struct metric_SO2 : public Metric 
+	{
+		template<class T, class DataSource>
+		struct traits {
+			typedef SO2_Adaptor<T, DataSource> distance_t;
+		};
+	};
+	/** Metaprogramming helper traits class for the SO3_InnerProdQuat metric */
+	struct metric_SO3 : public Metric
+	{
+		template<class T, class DataSource>
+		struct traits {
+			typedef SO3_Adaptor<T, DataSource> distance_t;
+		};
+	};
+
+	/** @} */
+
+	/** @addtogroup param_grp Parameter structs
+	  * @{ */
+
+	/**  Parameters (see README.md) */
+	struct KDTreeSingleIndexAdaptorParams
+	{
+		KDTreeSingleIndexAdaptorParams(size_t _leaf_max_size = 10) :
+			leaf_max_size(_leaf_max_size)
+		{}
+
+		size_t leaf_max_size;
+	};
+
+	/** Search options for KDTreeSingleIndexAdaptor::findNeighbors() */
+	struct SearchParams
+	{
+		/** Note: The first argument (
