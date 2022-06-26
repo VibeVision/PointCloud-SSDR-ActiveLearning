@@ -516,4 +516,79 @@ namespace nanoflann
 
 
 		size_t  remaining;  /* Number of bytes left in current block of storage. */
-		void*   base;     /* Pointer to base o
+		void*   base;     /* Pointer to base of current block of storage. */
+		void*   loc;      /* Current location in block to next allocate memory. */
+
+		void internal_init()
+		{
+			remaining = 0;
+			base = NULL;
+			usedMemory = 0;
+			wastedMemory = 0;
+		}
+
+	public:
+		size_t  usedMemory;
+		size_t  wastedMemory;
+
+		/**
+		    Default constructor. Initializes a new pool.
+		 */
+		PooledAllocator() {
+			internal_init();
+		}
+
+		/**
+		 * Destructor. Frees all the memory allocated in this pool.
+		 */
+		~PooledAllocator() {
+			free_all();
+		}
+
+		/** Frees all allocated memory chunks */
+		void free_all()
+		{
+			while (base != NULL) {
+				void *prev = *(static_cast<void**>( base)); /* Get pointer to prev block. */
+				::free(base);
+				base = prev;
+			}
+			internal_init();
+		}
+
+		/**
+		 * Returns a pointer to a piece of new memory of the given size in bytes
+		 * allocated from the pool.
+		 */
+		void* malloc(const size_t req_size)
+		{
+			/* Round size up to a multiple of wordsize.  The following expression
+			    only works for WORDSIZE that is a power of 2, by masking last bits of
+			    incremented size to zero.
+			 */
+			const size_t size = (req_size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
+
+			/* Check whether a new block must be allocated.  Note that the first word
+			    of a block is reserved for a pointer to the previous block.
+			 */
+			if (size > remaining) {
+
+				wastedMemory += remaining;
+
+				/* Allocate new storage. */
+				const size_t blocksize = (size + sizeof(void*) + (WORDSIZE - 1) > BLOCKSIZE) ?
+							size + sizeof(void*) + (WORDSIZE - 1) : BLOCKSIZE;
+
+				// use the standard C malloc to allocate memory
+				void* m = ::malloc(blocksize);
+				if (!m) {
+					fprintf(stderr, "Failed to allocate memory.\n");
+					return NULL;
+				}
+
+				/* Fill first word of new block with pointer to previous block. */
+				static_cast<void**>(m)[0] = base;
+				base = m;
+
+				size_t shift = 0;
+				//int size_t = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (W
