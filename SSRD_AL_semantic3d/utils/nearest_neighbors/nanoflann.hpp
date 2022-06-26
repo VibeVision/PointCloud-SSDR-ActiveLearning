@@ -460,4 +460,60 @@ namespace nanoflann
 	/** Search options for KDTreeSingleIndexAdaptor::findNeighbors() */
 	struct SearchParams
 	{
-		/** Note: The first argument (
+		/** Note: The first argument (checks_IGNORED_) is ignored, but kept for compatibility with the FLANN interface */
+		SearchParams(int checks_IGNORED_ = 32, float eps_ = 0, bool sorted_ = true ) :
+			checks(checks_IGNORED_), eps(eps_), sorted(sorted_) {}
+
+		int   checks;  //!< Ignored parameter (Kept for compatibility with the FLANN interface).
+		float eps;  //!< search for eps-approximate neighbours (default: 0)
+		bool sorted; //!< only for radius search, require neighbours sorted by distance (default: true)
+	};
+	/** @} */
+
+
+	/** @addtogroup memalloc_grp Memory allocation
+	  * @{ */
+
+	/**
+	 * Allocates (using C's malloc) a generic type T.
+	 *
+	 * Params:
+	 *     count = number of instances to allocate.
+	 * Returns: pointer (of type T*) to memory buffer
+	 */
+	template <typename T>
+	inline T* allocate(size_t count = 1)
+	{
+		T* mem = static_cast<T*>( ::malloc(sizeof(T)*count));
+		return mem;
+	}
+
+
+	/**
+	 * Pooled storage allocator
+	 *
+	 * The following routines allow for the efficient allocation of storage in
+	 * small chunks from a specified pool.  Rather than allowing each structure
+	 * to be freed individually, an entire pool of storage is freed at once.
+	 * This method has two advantages over just using malloc() and free().  First,
+	 * it is far more efficient for allocating small objects, as there is
+	 * no overhead for remembering all the information needed to free each
+	 * object or consolidating fragmented memory.  Second, the decision about
+	 * how long to keep an object is made at the time of allocation, and there
+	 * is no need to track down all the objects to free them.
+	 *
+	 */
+
+	const size_t     WORDSIZE = 16;
+	const size_t     BLOCKSIZE = 8192;
+
+	class PooledAllocator
+	{
+		/* We maintain memory alignment to word boundaries by requiring that all
+		    allocations be in multiples of the machine wordsize.  */
+		/* Size of machine word in bytes.  Must be power of 2. */
+		/* Minimum number of bytes requested at a time from	the system.  Must be multiple of WORDSIZE. */
+
+
+		size_t  remaining;  /* Number of bytes left in current block of storage. */
+		void*   base;     /* Pointer to base o
