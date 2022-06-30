@@ -651,4 +651,40 @@ namespace nanoflann
         typedef std::reverse_iterator<std::_Ptrit<value_type, difference_type, iterator,
                                       reference, iterator, reference> > reverse_iterator;
         typedef std::reverse_iterator<std::_Ptrit<value_type, difference_type, const_iterator,
-                                      const
+                                      const_reference, iterator, reference> > const_reverse_iterator;
+#else
+        // workaround for broken reverse_iterator implementations
+        typedef std::reverse_iterator<iterator,T> reverse_iterator;
+        typedef std::reverse_iterator<const_iterator,T> const_reverse_iterator;
+#endif
+
+        reverse_iterator rbegin() { return reverse_iterator(end()); }
+        const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
+        reverse_iterator rend() { return reverse_iterator(begin()); }
+        const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+        // operator[]
+        inline reference operator[](size_type i) { return elems[i]; }
+        inline const_reference operator[](size_type i) const { return elems[i]; }
+        // at() with range check
+        reference at(size_type i) { rangecheck(i); return elems[i]; }
+        const_reference at(size_type i) const { rangecheck(i); return elems[i]; }
+        // front() and back()
+        reference front() { return elems[0]; }
+        const_reference front() const { return elems[0]; }
+        reference back() { return elems[N-1]; }
+        const_reference back() const { return elems[N-1]; }
+        // size is constant
+        static inline size_type size() { return N; }
+        static bool empty() { return false; }
+        static size_type max_size() { return N; }
+        enum { static_size = N };
+		/** This method has no effects in this class, but raises an exception if the expected size does not match */
+		inline void resize(const size_t nElements) { if (nElements!=N) throw std::logic_error("Try to change the size of a CArray."); }
+        // swap (note: linear complexity in N, constant for given instantiation)
+        void swap (CArray<T,N>& y) { std::swap_ranges(begin(),end(),y.begin()); }
+        // direct access to data (read-only)
+        const T* data() const { return elems; }
+        // use array as C array (direct read/write access to data)
+        T* data() { return elems; }
+        // assignment with type conversion
+       
