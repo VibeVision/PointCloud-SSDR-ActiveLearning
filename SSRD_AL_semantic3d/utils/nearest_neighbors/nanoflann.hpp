@@ -687,4 +687,57 @@ namespace nanoflann
         // use array as C array (direct read/write access to data)
         T* data() { return elems; }
         // assignment with type conversion
-       
+        template <typename T2> CArray<T,N>& operator= (const CArray<T2,N>& rhs) {
+            std::copy(rhs.begin(),rhs.end(), begin());
+            return *this;
+        }
+        // assign one value to all elements
+        inline void assign (const T& value) { for (size_t i=0;i<N;i++) elems[i]=value; }
+        // assign (compatible with std::vector's one) (by JLBC for MRPT)
+        void assign (const size_t n, const T& value) { assert(N==n); for (size_t i=0;i<N;i++) elems[i]=value; }
+      private:
+        // check range (may be private because it is static)
+        static void rangecheck (size_type i) { if (i >= size()) { throw std::out_of_range("CArray<>: index out of range"); } }
+    }; // end of CArray
+
+	/** Used to declare fixed-size arrays when DIM>0, dynamically-allocated vectors when DIM=-1.
+	  * Fixed size version for a generic DIM:
+	  */
+	template <int DIM, typename T>
+	struct array_or_vector_selector
+	{
+		typedef CArray<T, DIM> container_t;
+	};
+	/** Dynamic size version */
+	template <typename T>
+	struct array_or_vector_selector<-1, T> {
+		typedef std::vector<T> container_t;
+	};
+	
+	/** @} */
+
+	/** kd-tree base-class
+	 *
+	 * Contains the member functions common to the classes KDTreeSingleIndexAdaptor and KDTreeSingleIndexDynamicAdaptor_.
+	 *
+	 * \tparam Derived The name of the class which inherits this class.
+	 * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
+	 * \tparam Distance The distance metric to use, these are all classes derived from nanoflann::Metric
+	 * \tparam DIM Dimensionality of data points (e.g. 3 for 3D points)
+	 * \tparam IndexType Will be typically size_t or int
+	 */
+
+	template<class Derived, typename Distance, class DatasetAdaptor, int DIM = -1, typename IndexType = size_t>
+	class KDTreeBaseClass
+	{
+
+	public:
+		/** Frees the previously-built index. Automatically called within buildIndex(). */
+		void freeIndex(Derived &obj)
+		{
+			obj.pool.free_all();
+			obj.root_node = NULL;
+			obj.m_size_at_index_build = 0;
+		}
+
+		typedef typename Distan
