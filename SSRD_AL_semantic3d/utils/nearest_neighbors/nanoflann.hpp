@@ -591,4 +591,64 @@ namespace nanoflann
 				base = m;
 
 				size_t shift = 0;
-				//int size_t = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (W
+				//int size_t = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (WORDSIZE-1);
+
+				remaining = blocksize - sizeof(void*) - shift;
+				loc = (static_cast<char*>(m) + sizeof(void*) + shift);
+			}
+			void* rloc = loc;
+			loc = static_cast<char*>(loc) + size;
+			remaining -= size;
+
+			usedMemory += size;
+
+			return rloc;
+		}
+
+		/**
+		 * Allocates (using this pool) a generic type T.
+		 *
+		 * Params:
+		 *     count = number of instances to allocate.
+		 * Returns: pointer (of type T*) to memory buffer
+		 */
+		template <typename T>
+		T* allocate(const size_t count = 1)
+		{
+			T* mem = static_cast<T*>(this->malloc(sizeof(T)*count));
+			return mem;
+		}
+
+	};
+
+    template <typename T, std::size_t N>
+    class CArray {
+      public:
+        T elems[N];    // fixed-size array of elements of type T
+
+      public:
+        // type definitions
+        typedef T              value_type;
+        typedef T*             iterator;
+        typedef const T*       const_iterator;
+        typedef T&             reference;
+        typedef const T&       const_reference;
+        typedef std::size_t    size_type;
+        typedef std::ptrdiff_t difference_type;
+
+        // iterator support
+        inline iterator begin() { return elems; }
+        inline const_iterator begin() const { return elems; }
+        inline iterator end() { return elems+N; }
+        inline const_iterator end() const { return elems+N; }
+
+        // reverse iterator support
+#if !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION) && !defined(BOOST_MSVC_STD_ITERATOR) && !defined(BOOST_NO_STD_ITERATOR_TRAITS)
+        typedef std::reverse_iterator<iterator> reverse_iterator;
+        typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+#elif defined(_MSC_VER) && (_MSC_VER == 1300) && defined(BOOST_DINKUMWARE_STDLIB) && (BOOST_DINKUMWARE_STDLIB == 310)
+        // workaround for broken reverse_iterator in VC7
+        typedef std::reverse_iterator<std::_Ptrit<value_type, difference_type, iterator,
+                                      reference, iterator, reference> > reverse_iterator;
+        typedef std::reverse_iterator<std::_Ptrit<value_type, difference_type, const_iterator,
+                                      const
