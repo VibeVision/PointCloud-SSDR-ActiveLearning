@@ -804,4 +804,58 @@ namespace nanoflann
 		size_t size(const Derived &obj) const { return obj.m_size; }
 
 		/** Returns the length of each point in the dataset */
-		size_t veclen
+		size_t veclen(const Derived &obj) {
+			return static_cast<size_t>(DIM>0 ? DIM : obj.dim);
+		}
+
+		/// Helper accessor to the dataset points:
+		inline ElementType dataset_get(const Derived &obj, size_t idx, int component) const{
+			return obj.dataset.kdtree_get_pt(idx, component);
+		}
+
+		/**
+		 * Computes the inde memory usage
+		 * Returns: memory used by the index
+		 */
+		size_t usedMemory(Derived &obj)
+		{
+			return obj.pool.usedMemory + obj.pool.wastedMemory + obj.dataset.kdtree_get_point_count() * sizeof(IndexType);  // pool memory and vind array memory
+		}
+
+		void computeMinMax(const Derived &obj, IndexType* ind, IndexType count, int element, ElementType& min_elem, ElementType& max_elem)
+		{
+			min_elem = dataset_get(obj, ind[0],element);
+			max_elem = dataset_get(obj, ind[0],element);
+			for (IndexType i = 1; i < count; ++i) {
+				ElementType val = dataset_get(obj, ind[i], element);
+				if (val < min_elem) min_elem = val;
+				if (val > max_elem) max_elem = val;
+			}
+		}
+
+		/**
+		 * Create a tree node that subdivides the list of vecs from vind[first]
+		 * to vind[last].  The routine is called recursively on each sublist.
+		 *
+		 * @param left index of the first vector
+		 * @param right index of the last vector
+		 */
+		NodePtr divideTree(Derived &obj, const IndexType left, const IndexType right, BoundingBox& bbox)
+		{
+			NodePtr node = obj.pool.template allocate<Node>(); // allocate memory
+
+			/* If too few exemplars remain, then make this a leaf node. */
+			if ( (right - left) <= static_cast<IndexType>(obj.m_leaf_max_size) ) {
+				node->child1 = node->child2 = NULL;    /* Mark as leaf node. */
+				node->node_type.lr.left = left;
+				node->node_type.lr.right = right;
+
+				// compute bounding-box of leaf points
+				for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+					bbox[i].low = dataset_get(obj, obj.vind[left], i);
+					bbox[i].high = dataset_get(obj, obj.vind[left], i);
+				}
+				for (IndexType k = left + 1; k < right; ++k) {
+					for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+						if (bbox[i].low > dataset_get(obj, obj.vind[k], i)) bbox[i].low = dataset_get(obj, obj.vind[k], i);
+					
