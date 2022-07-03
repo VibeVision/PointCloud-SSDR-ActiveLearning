@@ -740,4 +740,68 @@ namespace nanoflann
 			obj.m_size_at_index_build = 0;
 		}
 
-		typedef typename Distan
+		typedef typename Distance::ElementType  ElementType;
+		typedef typename Distance::DistanceType DistanceType;
+
+		/*--------------------- Internal Data Structures --------------------------*/
+		struct Node
+		{
+			/** Union used because a node can be either a LEAF node or a non-leaf node, so both data fields are never used simultaneously */
+			union {
+				struct leaf
+                                {
+					IndexType    left, right;  //!< Indices of points in leaf node
+				} lr;
+				struct nonleaf
+                                {
+					int          divfeat; //!< Dimension used for subdivision.
+					DistanceType divlow, divhigh; //!< The values used for subdivision.
+				} sub;
+			} node_type;
+			Node *child1, *child2;  //!< Child nodes (both=NULL mean its a leaf node)
+		};
+		
+		typedef Node* NodePtr;
+
+		struct Interval
+		{
+			ElementType low, high;
+		};
+
+		/**
+		 *  Array of indices to vectors in the dataset.
+		 */
+		std::vector<IndexType> vind;
+
+		NodePtr root_node;
+
+		size_t m_leaf_max_size;
+
+		size_t m_size; //!< Number of current points in the dataset
+		size_t m_size_at_index_build; //!< Number of points in the dataset when the index was built
+		int dim;  //!< Dimensionality of each data point
+
+		/** Define "BoundingBox" as a fixed-size or variable-size container depending on "DIM" */
+		typedef typename array_or_vector_selector<DIM, Interval>::container_t BoundingBox;
+
+		/** Define "distance_vector_t" as a fixed-size or variable-size container depending on "DIM" */
+		typedef typename array_or_vector_selector<DIM, DistanceType>::container_t distance_vector_t;
+
+		/** The KD-tree used to find neighbours */
+		
+		BoundingBox root_bbox;
+
+		/**
+		 * Pooled memory allocator.
+		 *
+		 * Using a pooled memory allocator is more efficient
+		 * than allocating memory directly when there is a large
+		 * number small of memory allocations.
+		 */
+		PooledAllocator pool;
+
+		/** Returns number of points in dataset  */
+		size_t size(const Derived &obj) const { return obj.m_size; }
+
+		/** Returns the length of each point in the dataset */
+		size_t veclen
