@@ -858,4 +858,64 @@ namespace nanoflann
 				for (IndexType k = left + 1; k < right; ++k) {
 					for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
 						if (bbox[i].low > dataset_get(obj, obj.vind[k], i)) bbox[i].low = dataset_get(obj, obj.vind[k], i);
-					
+						if (bbox[i].high < dataset_get(obj, obj.vind[k], i)) bbox[i].high = dataset_get(obj, obj.vind[k], i);
+					}
+				}
+			}
+			else {
+				IndexType idx;
+				int cutfeat;
+				DistanceType cutval;
+				middleSplit_(obj, &obj.vind[0] + left, right - left, idx, cutfeat, cutval, bbox);
+
+				node->node_type.sub.divfeat = cutfeat;
+
+				BoundingBox left_bbox(bbox);
+				left_bbox[cutfeat].high = cutval;
+				node->child1 = divideTree(obj, left, left + idx, left_bbox);
+
+				BoundingBox right_bbox(bbox);
+				right_bbox[cutfeat].low = cutval;
+				node->child2 = divideTree(obj, left + idx, right, right_bbox);
+
+				node->node_type.sub.divlow = left_bbox[cutfeat].high;
+				node->node_type.sub.divhigh = right_bbox[cutfeat].low;
+
+				for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+					bbox[i].low = std::min(left_bbox[i].low, right_bbox[i].low);
+					bbox[i].high = std::max(left_bbox[i].high, right_bbox[i].high);
+				}
+			}
+
+			return node;
+		}
+
+		void middleSplit_(Derived &obj, IndexType* ind, IndexType count, IndexType& index, int& cutfeat, DistanceType& cutval, const BoundingBox& bbox)
+		{
+			const DistanceType EPS = static_cast<DistanceType>(0.00001);
+			ElementType max_span = bbox[0].high-bbox[0].low;
+			for (int i = 1; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+				ElementType span = bbox[i].high - bbox[i].low;
+				if (span > max_span) {
+					max_span = span;
+				}
+			}
+			ElementType max_spread = -1;
+			cutfeat = 0;
+			for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+				ElementType span = bbox[i].high-bbox[i].low;
+				if (span > (1 - EPS) * max_span) {
+					ElementType min_elem, max_elem;
+					computeMinMax(obj, ind, count, i, min_elem, max_elem);
+					ElementType spread = max_elem - min_elem;;
+					if (spread > max_spread) {
+						cutfeat = i;
+						max_spread = spread;
+					}
+				}
+			}
+			// split in the middle
+			DistanceType split_val = (bbox[cutfeat].low + bbox[cutfeat].high) / 2;
+			ElementType min_elem, max_elem;
+			computeMinMax(obj, ind, count, cutfeat, min_elem, max_elem);
+
