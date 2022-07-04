@@ -975,4 +975,71 @@ namespace nanoflann
 			DistanceType distsq = DistanceType();
 
 			for (int i = 0; i < (DIM>0 ? DIM : obj.dim); ++i) {
-				if (vec[
+				if (vec[i] < obj.root_bbox[i].low) {
+					dists[i] = obj.distance.accum_dist(vec[i], obj.root_bbox[i].low, i);
+					distsq += dists[i];
+				}
+				if (vec[i] > obj.root_bbox[i].high) {
+					dists[i] = obj.distance.accum_dist(vec[i], obj.root_bbox[i].high, i);
+					distsq += dists[i];
+				}
+			}
+			return distsq;
+		}
+
+		void save_tree(Derived &obj, FILE* stream, NodePtr tree)
+		{
+			save_value(stream, *tree);
+			if (tree->child1 != NULL) {
+				save_tree(obj, stream, tree->child1);
+			}
+			if (tree->child2 != NULL) {
+				save_tree(obj, stream, tree->child2);
+			}
+		}
+
+
+		void load_tree(Derived &obj, FILE* stream, NodePtr& tree)
+		{
+			tree = obj.pool.template allocate<Node>();
+			load_value(stream, *tree);
+			if (tree->child1 != NULL) {
+				load_tree(obj, stream, tree->child1);
+			}
+			if (tree->child2 != NULL) {
+				load_tree(obj, stream, tree->child2);
+			}
+		}
+
+		/**  Stores the index in a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so when loading the index object it must be constructed associated to the same source of data points used while building it.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void saveIndex_(Derived &obj, FILE* stream)
+		{
+			save_value(stream, obj.m_size);
+			save_value(stream, obj.dim);
+			save_value(stream, obj.root_bbox);
+			save_value(stream, obj.m_leaf_max_size);
+			save_value(stream, obj.vind);
+			save_tree(obj, stream, obj.root_node);
+		}
+
+		/**  Loads a previous index from a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so the index object must be constructed associated to the same source of data points used while building the index.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void loadIndex_(Derived &obj, FILE* stream)
+		{
+			load_value(stream, obj.m_size);
+			load_value(stream, obj.dim);
+			load_value(stream, obj.root_bbox);
+			load_value(stream, obj.m_leaf_max_size);
+			load_value(stream, obj.vind);
+			load_tree(obj, stream, obj.root_node);
+		}
+
+	};
+
+
+	/** @addtogrou
