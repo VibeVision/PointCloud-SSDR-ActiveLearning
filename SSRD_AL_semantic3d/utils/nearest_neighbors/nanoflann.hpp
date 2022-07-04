@@ -919,3 +919,60 @@ namespace nanoflann
 			ElementType min_elem, max_elem;
 			computeMinMax(obj, ind, count, cutfeat, min_elem, max_elem);
 
+			if (split_val < min_elem) cutval = min_elem;
+			else if (split_val > max_elem) cutval = max_elem;
+			else cutval = split_val;
+
+			IndexType lim1, lim2;
+			planeSplit(obj, ind, count, cutfeat, cutval, lim1, lim2);
+
+			if (lim1 > count / 2) index = lim1;
+			else if (lim2 < count / 2) index = lim2;
+			else index = count/2;
+		}
+
+		/**
+		 *  Subdivide the list of points by a plane perpendicular on axe corresponding
+		 *  to the 'cutfeat' dimension at 'cutval' position.
+		 *
+		 *  On return:
+		 *  dataset[ind[0..lim1-1]][cutfeat]<cutval
+		 *  dataset[ind[lim1..lim2-1]][cutfeat]==cutval
+		 *  dataset[ind[lim2..count]][cutfeat]>cutval
+		 */
+		void planeSplit(Derived &obj, IndexType* ind, const IndexType count, int cutfeat, DistanceType &cutval, IndexType& lim1, IndexType& lim2)
+		{
+			/* Move vector indices for left subtree to front of list. */
+			IndexType left = 0;
+			IndexType right = count-1;
+			for (;; ) {
+				while (left <= right && dataset_get(obj, ind[left], cutfeat) < cutval) ++left;
+				while (right && left <= right && dataset_get(obj, ind[right], cutfeat) >= cutval) --right;
+				if (left > right || !right) break;  // "!right" was added to support unsigned Index types
+				std::swap(ind[left], ind[right]);
+				++left;
+				--right;
+			}
+			/* If either list is empty, it means that all remaining features
+			 * are identical. Split in the middle to maintain a balanced tree.
+			 */
+			lim1 = left;
+			right = count-1;
+			for (;; ) {
+				while (left <= right && dataset_get(obj, ind[left], cutfeat) <= cutval) ++left;
+				while (right && left <= right && dataset_get(obj, ind[right], cutfeat) > cutval) --right;
+				if (left > right || !right) break;  // "!right" was added to support unsigned Index types
+				std::swap(ind[left], ind[right]);
+				++left;
+				--right;
+			}
+			lim2 = left;
+		}
+
+		DistanceType computeInitialDistances(const Derived &obj, const ElementType* vec, distance_vector_t& dists) const
+		{
+			assert(vec);
+			DistanceType distsq = DistanceType();
+
+			for (int i = 0; i < (DIM>0 ? DIM : obj.dim); ++i) {
+				if (vec[
