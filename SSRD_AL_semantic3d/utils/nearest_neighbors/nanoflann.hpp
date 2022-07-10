@@ -1089,4 +1089,59 @@ namespace nanoflann
 		/**
 		 * The dataset used by this index
 		 */
-		const DatasetAdaptor &dataset; //!< The source of our
+		const DatasetAdaptor &dataset; //!< The source of our data
+
+		const KDTreeSingleIndexAdaptorParams index_params;
+
+		Distance distance;
+
+		typedef typename nanoflann::KDTreeBaseClass<nanoflann::KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, IndexType>, Distance, DatasetAdaptor, DIM, IndexType> BaseClassRef;
+
+		typedef typename BaseClassRef::ElementType ElementType;
+		typedef typename BaseClassRef::DistanceType DistanceType;
+
+		typedef typename BaseClassRef::Node Node;
+		typedef Node* NodePtr;
+
+		typedef typename BaseClassRef::Interval Interval;
+		/** Define "BoundingBox" as a fixed-size or variable-size container depending on "DIM" */
+		typedef typename BaseClassRef::BoundingBox BoundingBox;
+
+		/** Define "distance_vector_t" as a fixed-size or variable-size container depending on "DIM" */
+		typedef typename BaseClassRef::distance_vector_t distance_vector_t;
+
+
+		KDTreeSingleIndexAdaptor(const int dimensionality, const DatasetAdaptor& inputData, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams() ) :
+			dataset(inputData), index_params(params), distance(inputData)
+		{
+			BaseClassRef::root_node = NULL;
+			BaseClassRef::m_size = dataset.kdtree_get_point_count();
+			BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
+			BaseClassRef::dim = dimensionality;
+			if (DIM>0) BaseClassRef::dim = DIM;
+			BaseClassRef::m_leaf_max_size = params.leaf_max_size;
+
+			// Create a permutable array of indices to the input vectors.
+			init_vind();
+		}
+
+		/**
+		 * Builds the index
+		 */
+		void buildIndex()
+		{
+			BaseClassRef::m_size = dataset.kdtree_get_point_count();
+			BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
+			init_vind();
+			this->freeIndex(*this);
+			BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
+			if(BaseClassRef::m_size == 0) return;
+			computeBoundingBox(BaseClassRef::root_bbox);
+			BaseClassRef::root_node = this->divideTree(*this, 0, BaseClassRef::m_size, BaseClassRef::root_bbox );   // construct the tree
+		}
+
+		/** \name Query methods
+		  * @{ */
+
+		/**
+		 * Find set of neare
