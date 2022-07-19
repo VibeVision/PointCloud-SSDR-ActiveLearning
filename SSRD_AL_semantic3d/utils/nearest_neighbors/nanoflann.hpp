@@ -1144,4 +1144,44 @@ namespace nanoflann
 		  * @{ */
 
 		/**
-		 * Find set of neare
+		 * Find set of nearest neighbors to vec[0:dim-1]. Their indices are stored inside
+		 * the result object.
+		 *
+		 * Params:
+		 *     result = the result object in which the indices of the nearest-neighbors are stored
+		 *     vec = the vector for which to search the nearest neighbors
+		 *
+		 * \tparam RESULTSET Should be any ResultSet<DistanceType>
+         * \return  True if the requested neighbors could be found.
+		 * \sa knnSearch, radiusSearch
+		 */
+		template <typename RESULTSET>
+		bool findNeighbors(RESULTSET& result, const ElementType* vec, const SearchParams& searchParams) const
+		{
+			assert(vec);
+            if (this->size(*this) == 0)
+                return false;
+			if (!BaseClassRef::root_node)
+                throw std::runtime_error("[nanoflann] findNeighbors() called before building the index.");
+			float epsError = 1 + searchParams.eps;
+
+			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)
+			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim), 0); // Fill it with zeros.
+			DistanceType distsq = this->computeInitialDistances(*this, vec, dists);
+			searchLevel(result, vec, BaseClassRef::root_node, distsq, dists, epsError);  // "count_leaf" parameter removed since was neither used nor returned to the user.
+            return result.full();
+		}
+
+		/**
+		 * Find the "num_closest" nearest neighbors to the \a query_point[0:dim-1]. Their indices are stored inside
+		 * the result object.
+		 *  \sa radiusSearch, findNeighbors
+		 * \note nChecks_IGNORED is ignored but kept for compatibility with the original FLANN interface.
+		 * \return Number `N` of valid points in the result set. Only the first `N` entries in `out_indices` and `out_distances_sq` will be valid.
+		 *         Return may be less than `num_closest` only if the number of elements in the tree is less than `num_closest`.
+		 */
+		size_t knnSearch(const ElementType *query_point, const size_t num_closest, IndexType *out_indices, DistanceType *out_distances_sq, const int /* nChecks_IGNORED */ = 10) const
+		{
+			nanoflann::KNNResultSet<DistanceType,IndexType> resultSet(num_closest);
+			resultSet.init(out_indices, out_distances_sq);
+			
