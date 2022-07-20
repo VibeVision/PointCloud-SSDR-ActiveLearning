@@ -1184,4 +1184,48 @@ namespace nanoflann
 		{
 			nanoflann::KNNResultSet<DistanceType,IndexType> resultSet(num_closest);
 			resultSet.init(out_indices, out_distances_sq);
-			
+			this->findNeighbors(resultSet, query_point, nanoflann::SearchParams());
+			return resultSet.size();
+		}
+
+		/**
+		 * Find all the neighbors to \a query_point[0:dim-1] within a maximum radius.
+		 *  The output is given as a vector of pairs, of which the first element is a point index and the second the corresponding distance.
+		 *  Previous contents of \a IndicesDists are cleared.
+		 *
+		 *  If searchParams.sorted==true, the output list is sorted by ascending distances.
+		 *
+		 *  For a better performance, it is advisable to do a .reserve() on the vector if you have any wild guess about the number of expected matches.
+		 *
+		 *  \sa knnSearch, findNeighbors, radiusSearchCustomCallback
+		 * \return The number of points within the given radius (i.e. indices.size() or dists.size() )
+		 */
+		size_t radiusSearch(const ElementType *query_point, const DistanceType &radius, std::vector<std::pair<IndexType, DistanceType> >& IndicesDists, const SearchParams& searchParams) const
+		{
+			RadiusResultSet<DistanceType, IndexType> resultSet(radius, IndicesDists);
+			const size_t nFound = radiusSearchCustomCallback(query_point, resultSet, searchParams);
+			if (searchParams.sorted)
+				std::sort(IndicesDists.begin(), IndicesDists.end(), IndexDist_Sorter() );
+			return nFound;
+		}
+
+		/**
+		 * Just like radiusSearch() but with a custom callback class for each point found in the radius of the query.
+		 * See the source of RadiusResultSet<> as a start point for your own classes.
+		 * \sa radiusSearch
+		 */
+		template <class SEARCH_CALLBACK>
+		size_t radiusSearchCustomCallback(const ElementType *query_point, SEARCH_CALLBACK &resultSet, const SearchParams& searchParams = SearchParams() ) const
+		{
+			this->findNeighbors(resultSet, query_point, searchParams);
+			return resultSet.size();
+		}
+
+		/** @} */
+
+	public:
+		/** Make sure the auxiliary list \a vind has the same size than the current dataset, and re-generate if size has changed. */
+		void init_vind()
+		{
+			// Create a permutable array of indices to the input vectors.
+			BaseClassRef::m_size 
