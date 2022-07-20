@@ -1228,4 +1228,48 @@ namespace nanoflann
 		void init_vind()
 		{
 			// Create a permutable array of indices to the input vectors.
-			BaseClassRef::m_size 
+			BaseClassRef::m_size = dataset.kdtree_get_point_count();
+			if (BaseClassRef::vind.size() != BaseClassRef::m_size) BaseClassRef::vind.resize(BaseClassRef::m_size);
+			for (size_t i = 0; i < BaseClassRef::m_size; i++) BaseClassRef::vind[i] = i;
+		}
+
+		void computeBoundingBox(BoundingBox& bbox)
+		{
+			bbox.resize((DIM > 0 ? DIM : BaseClassRef::dim));
+			if (dataset.kdtree_get_bbox(bbox))
+			{
+				// Done! It was implemented in derived class
+			}
+			else
+			{
+				const size_t N = dataset.kdtree_get_point_count();
+				if (!N) throw std::runtime_error("[nanoflann] computeBoundingBox() called but no data points found.");
+				for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+					bbox[i].low =
+					bbox[i].high = this->dataset_get(*this, 0, i);
+				}
+				for (size_t k = 1; k < N; ++k) {
+					for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+						if (this->dataset_get(*this, k, i) < bbox[i].low) bbox[i].low = this->dataset_get(*this, k, i);
+						if (this->dataset_get(*this, k, i) > bbox[i].high) bbox[i].high = this->dataset_get(*this, k, i);
+					}
+				}
+			}
+		}
+
+		/**
+		 * Performs an exact search in the tree starting from a node.
+		 * \tparam RESULTSET Should be any ResultSet<DistanceType>
+                 * \return true if the search should be continued, false if the results are sufficient
+		 */
+		template <class RESULTSET>
+                bool searchLevel(RESULTSET& result_set, const ElementType* vec, const NodePtr node, DistanceType mindistsq,
+						 distance_vector_t& dists, const float epsError) const
+		{
+			/* If this is a leaf node, then do check and return. */
+			if ((node->child1 == NULL) && (node->child2 == NULL)) {
+				//count_leaf += (node->lr.right-node->lr.left);  // Removed since was neither used nor returned to the user.
+				DistanceType worst_dist = result_set.worstDist();
+				for (IndexType i = node->node_type.lr.left; i<node->node_type.lr.right; ++i) {
+					const IndexType index = BaseClassRef::vind[i];// reorder... : i;
+					DistanceType dist = distance.evalMetric(vec, ind
