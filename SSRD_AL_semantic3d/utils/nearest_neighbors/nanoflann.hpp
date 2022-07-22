@@ -1272,4 +1272,56 @@ namespace nanoflann
 				DistanceType worst_dist = result_set.worstDist();
 				for (IndexType i = node->node_type.lr.left; i<node->node_type.lr.right; ++i) {
 					const IndexType index = BaseClassRef::vind[i];// reorder... : i;
-					DistanceType dist = distance.evalMetric(vec, ind
+					DistanceType dist = distance.evalMetric(vec, index, (DIM > 0 ? DIM : BaseClassRef::dim));
+					if (dist < worst_dist) {
+                                                if(!result_set.addPoint(dist, BaseClassRef::vind[i])) {
+                                                    // the resultset doesn't want to receive any more points, we're done searching!
+                                                    return false;
+                                                }
+					}
+				}
+                                return true;
+			}
+
+			/* Which child branch should be taken first? */
+			int idx = node->node_type.sub.divfeat;
+			ElementType val = vec[idx];
+			DistanceType diff1 = val - node->node_type.sub.divlow;
+			DistanceType diff2 = val - node->node_type.sub.divhigh;
+
+			NodePtr bestChild;
+			NodePtr otherChild;
+			DistanceType cut_dist;
+			if ((diff1 + diff2) < 0) {
+				bestChild = node->child1;
+				otherChild = node->child2;
+				cut_dist = distance.accum_dist(val, node->node_type.sub.divhigh, idx);
+			}
+			else {
+				bestChild = node->child2;
+				otherChild = node->child1;
+				cut_dist = distance.accum_dist( val, node->node_type.sub.divlow, idx);
+			}
+
+			/* Call recursively to search next level down. */
+                        if(!searchLevel(result_set, vec, bestChild, mindistsq, dists, epsError)) {
+                            // the resultset doesn't want to receive any more points, we're done searching!
+                            return false;
+                        }
+
+			DistanceType dst = dists[idx];
+			mindistsq = mindistsq + cut_dist - dst;
+			dists[idx] = cut_dist;
+			if (mindistsq*epsError <= result_set.worstDist()) {
+                            if(!searchLevel(result_set, vec, otherChild, mindistsq, dists, epsError)) {
+                                // the resultset doesn't want to receive any more points, we're done searching!
+                                return false;
+                            }
+			}
+			dists[idx] = dst;
+                        return true;
+		}
+
+	public:
+		/**  Stores the index in a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the fil
