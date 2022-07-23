@@ -1324,4 +1324,53 @@ namespace nanoflann
 
 	public:
 		/**  Stores the index in a binary file.
-		  *   IMPORTANT NOTE: The set of data points is NOT stored in the fil
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so when loading the index object it must be constructed associated to the same source of data points used while building it.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void saveIndex(FILE* stream)
+		{
+			this->saveIndex_(*this, stream);
+		}
+
+		/**  Loads a previous index from a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so the index object must be constructed associated to the same source of data points used while building the index.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void loadIndex(FILE* stream)
+		{
+			this->loadIndex_(*this, stream);
+		}
+
+	};   // class KDTree
+
+
+	/** kd-tree dynamic index
+	 *
+	 * Contains the k-d trees and other information for indexing a set of points
+	 * for nearest-neighbor matching.
+	 *
+	 *  The class "DatasetAdaptor" must provide the following interface (can be non-virtual, inlined methods):
+	 *
+	 *  \code
+	 *   // Must return the number of data poins
+	 *   inline size_t kdtree_get_point_count() const { ... }
+	 *
+	 *   // Must return the dim'th component of the idx'th point in the class:
+	 *   inline T kdtree_get_pt(const size_t idx, int dim) const { ... }
+	 *
+	 *   // Optional bounding-box computation: return false to default to a standard bbox computation loop.
+	 *   //   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+	 *   //   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+	 *   template <class BBOX>
+	 *   bool kdtree_get_bbox(BBOX &bb) const
+	 *   {
+	 *      bb[0].low = ...; bb[0].high = ...;  // 0th dimension limits
+	 *      bb[1].low = ...; bb[1].high = ...;  // 1st dimension limits
+	 *      ...
+	 *      return true;
+	 *   }
+	 *
+	 *  \endcode
+	 *
+	 * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
+	 * \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple,
