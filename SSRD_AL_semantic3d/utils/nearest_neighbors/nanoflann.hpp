@@ -1373,4 +1373,53 @@ namespace nanoflann
 	 *  \endcode
 	 *
 	 * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
-	 * \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple,
+	 * \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc.
+	 * \tparam DIM Dimensionality of data points (e.g. 3 for 3D points)
+	 * \tparam IndexType Will be typically size_t or int
+	 */	 
+	template <typename Distance, class DatasetAdaptor, int DIM = -1, typename IndexType = size_t>
+	class KDTreeSingleIndexDynamicAdaptor_ : public KDTreeBaseClass<KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM, IndexType>, Distance, DatasetAdaptor, DIM, IndexType>
+	{
+	public:
+
+		/**
+		 * The dataset used by this index
+		 */
+		const DatasetAdaptor &dataset; //!< The source of our data
+
+		KDTreeSingleIndexAdaptorParams index_params;
+
+		std::vector<int> &treeIndex;
+
+		Distance distance;
+
+		typedef typename nanoflann::KDTreeBaseClass<nanoflann::KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM, IndexType>, Distance, DatasetAdaptor, DIM, IndexType> BaseClassRef;
+
+		typedef typename BaseClassRef::ElementType  ElementType;
+		typedef typename BaseClassRef::DistanceType  DistanceType;
+
+		typedef typename BaseClassRef::Node Node;
+		typedef Node* NodePtr;
+
+		typedef typename BaseClassRef::Interval Interval;
+		/** Define "BoundingBox" as a fixed-size or variable-size container depending on "DIM" */
+		typedef typename BaseClassRef::BoundingBox BoundingBox;
+
+		/** Define "distance_vector_t" as a fixed-size or variable-size container depending on "DIM" */
+		typedef typename BaseClassRef::distance_vector_t distance_vector_t;
+
+
+		KDTreeSingleIndexDynamicAdaptor_(const int dimensionality, const DatasetAdaptor& inputData, std::vector<int>& treeIndex_, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams()) :
+			dataset(inputData), index_params(params), treeIndex(treeIndex_), distance(inputData)
+		{
+			BaseClassRef::root_node = NULL;
+			BaseClassRef::m_size = 0;
+			BaseClassRef::m_size_at_index_build = 0;
+			BaseClassRef::dim = dimensionality;
+			if (DIM>0) BaseClassRef::dim = DIM;
+			BaseClassRef::m_leaf_max_size = params.leaf_max_size;
+		}
+
+
+		/** Assignment operator definiton */
+		KDTreeSingleIndexDynamicAdaptor_ operator=( const K
