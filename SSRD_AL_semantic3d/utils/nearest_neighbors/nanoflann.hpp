@@ -1422,4 +1422,56 @@ namespace nanoflann
 
 
 		/** Assignment operator definiton */
-		KDTreeSingleIndexDynamicAdaptor_ operator=( const K
+		KDTreeSingleIndexDynamicAdaptor_ operator=( const KDTreeSingleIndexDynamicAdaptor_& rhs ) {
+		      KDTreeSingleIndexDynamicAdaptor_ ssdr( rhs );
+		      std::swap( BaseClassRef::vind, ssdr.BaseClassRef::vind );
+		      std::swap( BaseClassRef::m_leaf_max_size, ssdr.BaseClassRef::m_leaf_max_size );
+		      std::swap( index_params, ssdr.index_params );
+		      std::swap( treeIndex, ssdr.treeIndex );
+		      std::swap( BaseClassRef::m_size, ssdr.BaseClassRef::m_size );
+		      std::swap( BaseClassRef::m_size_at_index_build, ssdr.BaseClassRef::m_size_at_index_build );
+		      std::swap( BaseClassRef::root_node, ssdr.BaseClassRef::root_node );
+		      std::swap( BaseClassRef::root_bbox, ssdr.BaseClassRef::root_bbox );
+		      std::swap( BaseClassRef::pool, ssdr.BaseClassRef::pool );
+		      return *this;
+		 }
+
+		/**
+		 * Builds the index
+		 */
+		void buildIndex()
+		{
+			BaseClassRef::m_size = BaseClassRef::vind.size();
+			this->freeIndex(*this);
+			BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
+			if(BaseClassRef::m_size == 0) return;
+			computeBoundingBox(BaseClassRef::root_bbox);
+			BaseClassRef::root_node = this->divideTree(*this, 0, BaseClassRef::m_size, BaseClassRef::root_bbox );   // construct the tree
+		}
+
+		/** \name Query methods
+		  * @{ */
+
+		/**
+		 * Find set of nearest neighbors to vec[0:dim-1]. Their indices are stored inside
+		 * the result object.
+		 *
+		 * Params:
+		 *     result = the result object in which the indices of the nearest-neighbors are stored
+		 *     vec = the vector for which to search the nearest neighbors
+		 *
+		 * \tparam RESULTSET Should be any ResultSet<DistanceType>
+         * \return  True if the requested neighbors could be found.
+		 * \sa knnSearch, radiusSearch
+		 */
+		template <typename RESULTSET>
+		bool findNeighbors(RESULTSET& result, const ElementType* vec, const SearchParams& searchParams) const
+		{
+			assert(vec);
+            if (this->size(*this) == 0)
+                return false;
+			if (!BaseClassRef::root_node)
+                return false;
+			float epsError = 1 + searchParams.eps;
+
+			distance_vec
