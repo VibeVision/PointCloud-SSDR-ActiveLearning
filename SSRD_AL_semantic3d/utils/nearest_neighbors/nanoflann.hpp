@@ -1507,4 +1507,57 @@ namespace nanoflann
 		 *  For a better performance, it is advisable to do a .reserve() on the vector if you have any wild guess about the number of expected matches.
 		 *
 		 *  \sa knnSearch, findNeighbors, radiusSearchCustomCallback
-		 * \return The number of points within the given radius (i.e. indices.size() or dists.size
+		 * \return The number of points within the given radius (i.e. indices.size() or dists.size() )
+		 */
+		size_t radiusSearch(const ElementType *query_point, const DistanceType &radius, std::vector<std::pair<IndexType,DistanceType> >& IndicesDists, const SearchParams& searchParams) const
+		{
+			RadiusResultSet<DistanceType,IndexType> resultSet(radius, IndicesDists);
+			const size_t nFound = radiusSearchCustomCallback(query_point, resultSet, searchParams);
+			if (searchParams.sorted)
+				std::sort(IndicesDists.begin(), IndicesDists.end(), IndexDist_Sorter() );
+			return nFound;
+		}
+
+		/**
+		 * Just like radiusSearch() but with a custom callback class for each point found in the radius of the query.
+		 * See the source of RadiusResultSet<> as a start point for your own classes.
+		 * \sa radiusSearch
+		 */
+		template <class SEARCH_CALLBACK>
+		size_t radiusSearchCustomCallback(const ElementType *query_point, SEARCH_CALLBACK &resultSet, const SearchParams& searchParams = SearchParams() ) const
+		{
+			this->findNeighbors(resultSet, query_point, searchParams);
+			return resultSet.size();
+		}
+
+		/** @} */
+
+	public:
+
+
+		void computeBoundingBox(BoundingBox& bbox)
+		{
+			bbox.resize((DIM > 0 ? DIM : BaseClassRef::dim));
+			if (dataset.kdtree_get_bbox(bbox))
+			{
+				// Done! It was implemented in derived class
+			}
+			else
+			{
+				const size_t N = BaseClassRef::m_size;
+				if (!N) throw std::runtime_error("[nanoflann] computeBoundingBox() called but no data points found.");
+				for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+					bbox[i].low =
+					bbox[i].high = this->dataset_get(*this, BaseClassRef::vind[0], i);
+				}
+				for (size_t k = 1; k < N; ++k) {
+					for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+						if (this->dataset_get(*this, BaseClassRef::vind[k], i) < bbox[i].low) bbox[i].low = this->dataset_get(*this, BaseClassRef::vind[k], i);
+						if (this->dataset_get(*this, BaseClassRef::vind[k], i) > bbox[i].high) bbox[i].high = this->dataset_get(*this, BaseClassRef::vind[k], i);
+					}
+				}
+			}
+		}
+
+		/**
+		 * Performs an exact search in the tree starting fro
