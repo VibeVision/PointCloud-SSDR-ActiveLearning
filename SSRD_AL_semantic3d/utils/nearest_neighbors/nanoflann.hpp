@@ -1474,4 +1474,37 @@ namespace nanoflann
                 return false;
 			float epsError = 1 + searchParams.eps;
 
-			distance_vec
+			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)
+			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim) , 0); // Fill it with zeros.
+			DistanceType distsq = this->computeInitialDistances(*this, vec, dists);
+			searchLevel(result, vec, BaseClassRef::root_node, distsq, dists, epsError);  // "count_leaf" parameter removed since was neither used nor returned to the user.
+            return result.full();
+		}
+
+		/**
+		 * Find the "num_closest" nearest neighbors to the \a query_point[0:dim-1]. Their indices are stored inside
+		 * the result object.
+		 *  \sa radiusSearch, findNeighbors
+		 * \note nChecks_IGNORED is ignored but kept for compatibility with the original FLANN interface.
+		 * \return Number `N` of valid points in the result set. Only the first `N` entries in `out_indices` and `out_distances_sq` will be valid. 
+		 *         Return may be less than `num_closest` only if the number of elements in the tree is less than `num_closest`.
+		 */
+		size_t knnSearch(const ElementType *query_point, const size_t num_closest, IndexType *out_indices, DistanceType *out_distances_sq, const int /* nChecks_IGNORED */ = 10) const
+		{
+			nanoflann::KNNResultSet<DistanceType,IndexType> resultSet(num_closest);
+			resultSet.init(out_indices, out_distances_sq);
+			this->findNeighbors(resultSet, query_point, nanoflann::SearchParams());
+			return resultSet.size();
+		}
+
+		/**
+		 * Find all the neighbors to \a query_point[0:dim-1] within a maximum radius.
+		 *  The output is given as a vector of pairs, of which the first element is a point index and the second the corresponding distance.
+		 *  Previous contents of \a IndicesDists are cleared.
+		 *
+		 *  If searchParams.sorted==true, the output list is sorted by ascending distances.
+		 *
+		 *  For a better performance, it is advisable to do a .reserve() on the vector if you have any wild guess about the number of expected matches.
+		 *
+		 *  \sa knnSearch, findNeighbors, radiusSearchCustomCallback
+		 * \return The number of points within the given radius (i.e. indices.size() or dists.size
