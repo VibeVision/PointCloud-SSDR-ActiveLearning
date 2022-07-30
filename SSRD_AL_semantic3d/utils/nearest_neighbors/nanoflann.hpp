@@ -1560,4 +1560,60 @@ namespace nanoflann
 		}
 
 		/**
-		 * Performs an exact search in the tree starting fro
+		 * Performs an exact search in the tree starting from a node.
+		 * \tparam RESULTSET Should be any ResultSet<DistanceType>
+		 */
+		template <class RESULTSET>
+		void searchLevel(RESULTSET& result_set, const ElementType* vec, const NodePtr node, DistanceType mindistsq,
+						 distance_vector_t& dists, const float epsError) const
+		{
+			/* If this is a leaf node, then do check and return. */
+			if ((node->child1 == NULL) && (node->child2 == NULL)) {
+				//count_leaf += (node->lr.right-node->lr.left);  // Removed since was neither used nor returned to the user.
+				DistanceType worst_dist = result_set.worstDist();
+				for (IndexType i = node->node_type.lr.left; i < node->node_type.lr.right; ++i) {
+					const IndexType index = BaseClassRef::vind[i];// reorder... : i;
+					if(treeIndex[index] == -1)
+						continue;
+					DistanceType dist = distance.evalMetric(vec, index, (DIM > 0 ? DIM : BaseClassRef::dim));
+					if (dist<worst_dist) {
+						result_set.addPoint(dist, BaseClassRef::vind[i]);
+					}
+				}
+				return;
+			}
+
+			/* Which child branch should be taken first? */
+			int idx = node->node_type.sub.divfeat;
+			ElementType val = vec[idx];
+			DistanceType diff1 = val - node->node_type.sub.divlow;
+			DistanceType diff2 = val - node->node_type.sub.divhigh;
+
+			NodePtr bestChild;
+			NodePtr otherChild;
+			DistanceType cut_dist;
+			if ((diff1 + diff2) < 0) {
+				bestChild = node->child1;
+				otherChild = node->child2;
+				cut_dist = distance.accum_dist(val, node->node_type.sub.divhigh, idx);
+			}
+			else {
+				bestChild = node->child2;
+				otherChild = node->child1;
+				cut_dist = distance.accum_dist( val, node->node_type.sub.divlow, idx);
+			}
+
+			/* Call recursively to search next level down. */
+			searchLevel(result_set, vec, bestChild, mindistsq, dists, epsError);
+
+			DistanceType dst = dists[idx];
+			mindistsq = mindistsq + cut_dist - dst;
+			dists[idx] = cut_dist;
+			if (mindistsq*epsError <= result_set.worstDist()) {
+				searchLevel(result_set, vec, otherChild, mindistsq, dists, epsError);
+			}
+			dists[idx] = dst;
+		}
+
+	public:
+		/**  S
