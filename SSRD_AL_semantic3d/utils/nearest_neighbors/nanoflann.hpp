@@ -1616,4 +1616,58 @@ namespace nanoflann
 		}
 
 	public:
-		/**  S
+		/**  Stores the index in a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so when loading the index object it must be constructed associated to the same source of data points used while building it.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void saveIndex(FILE* stream)
+		{
+			this->saveIndex_(*this, stream);
+		}
+
+		/**  Loads a previous index from a binary file.
+		  *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so the index object must be constructed associated to the same source of data points used while building the index.
+		  * See the example: examples/saveload_example.cpp
+		  * \sa loadIndex  */
+		void loadIndex(FILE* stream)
+		{
+			this->loadIndex_(*this, stream);
+		}
+
+	};
+
+
+	/** kd-tree dynaimic index
+	 *
+	 * class to create multiple static index and merge their results to behave as single dynamic index as proposed in Logarithmic Approach.
+	 *  
+	 *  Example of usage:
+	 *  examples/dynamic_pointcloud_example.cpp
+	 *
+	 * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
+	 * \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc.
+	 * \tparam DIM Dimensionality of data points (e.g. 3 for 3D points)
+	 * \tparam IndexType Will be typically size_t or int
+	 */
+	template <typename Distance, class DatasetAdaptor,int DIM = -1, typename IndexType = size_t>
+	class KDTreeSingleIndexDynamicAdaptor
+	{
+	public:
+		typedef typename Distance::ElementType  ElementType;
+		typedef typename Distance::DistanceType DistanceType;
+	protected:
+
+		size_t m_leaf_max_size;
+		size_t treeCount;
+		size_t pointCount;
+
+		/**
+		 * The dataset used by this index
+		 */
+		const DatasetAdaptor &dataset; //!< The source of our data
+
+		std::vector<int> treeIndex; //!< treeIndex[idx] is the index of tree in which point at idx is stored. treeIndex[idx]=-1 means that point has been removed.
+
+		KDTreeSingleIndexAdaptorParams index_params;
+
+		int dim;  //!< Dimen
