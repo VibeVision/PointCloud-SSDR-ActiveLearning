@@ -1670,4 +1670,72 @@ namespace nanoflann
 
 		KDTreeSingleIndexAdaptorParams index_params;
 
-		int dim;  //!< Dimen
+		int dim;  //!< Dimensionality of each data point
+
+		typedef KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM> index_container_t;
+		std::vector<index_container_t> index;
+
+	public:
+		/** Get a const ref to the internal list of indices; the number of indices is adapted dynamically as 
+		  * the dataset grows in size. */
+		const std::vector<index_container_t> & getAllIndices() const {
+			return index;
+		}
+
+	private:
+		/** finds position of least significant unset bit */
+		int First0Bit(IndexType num)
+		{
+			int pos = 0;
+			while(num&1)
+			{
+				num = num>>1;
+				pos++;
+			}
+			return pos;
+		}
+
+		/** Creates multiple empty trees to handle dynamic support */
+		void init()
+		{
+			typedef KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM> my_kd_tree_t;
+			std::vector<my_kd_tree_t> index_(treeCount, my_kd_tree_t(dim /*dim*/, dataset, treeIndex, index_params));
+			index=index_;
+		}
+
+	public:
+
+		Distance distance;
+
+
+		KDTreeSingleIndexDynamicAdaptor(const int dimensionality, const DatasetAdaptor& inputData, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams() , const size_t maximumPointCount = 1000000000U) :
+			dataset(inputData), index_params(params), distance(inputData)
+		{
+			treeCount = std::log2(maximumPointCount);
+			pointCount = 0U;
+			dim = dimensionality;
+			treeIndex.clear();
+			if (DIM > 0) dim = DIM;
+			m_leaf_max_size = params.leaf_max_size;
+			init();
+			int num_initial_points = dataset.kdtree_get_point_count();
+			if (num_initial_points > 0) {
+				addPoints(0, num_initial_points - 1);
+			}
+		}
+
+		/** Deleted copy constructor*/
+		KDTreeSingleIndexDynamicAdaptor(const KDTreeSingleIndexDynamicAdaptor<Distance, DatasetAdaptor, DIM, IndexType>&) = delete;
+
+
+		/** Add points to the set, Inserts all points from [start, end] */
+		void addPoints(IndexType start, IndexType end)
+		{
+			int count = end - start + 1;
+			treeIndex.resize(treeIndex.size() + count);
+			for(IndexType idx = start; idx <= end; idx++) {
+				int pos = First0Bit(pointCount);
+				index[pos].vind.clear();
+				treeIndex[pointCount]=pos;
+				for(int i = 0; i < pos; i++) {
+					for(i
