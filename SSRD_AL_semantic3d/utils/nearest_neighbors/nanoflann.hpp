@@ -1738,4 +1738,65 @@ namespace nanoflann
 				index[pos].vind.clear();
 				treeIndex[pointCount]=pos;
 				for(int i = 0; i < pos; i++) {
-					for(i
+					for(int j = 0; j < static_cast<int>(index[i].vind.size()); j++) {
+						index[pos].vind.push_back(index[i].vind[j]);
+						treeIndex[index[i].vind[j]] = pos;
+					}
+					index[i].vind.clear();
+					index[i].freeIndex(index[i]);
+				}
+				index[pos].vind.push_back(idx);
+				index[pos].buildIndex();
+				pointCount++;
+			}
+		}
+
+		/** Remove a point from the set (Lazy Deletion) */
+		void removePoint(size_t idx)
+		{
+			if(idx >= pointCount)
+				return;
+			treeIndex[idx] = -1;
+		}
+
+		/**
+		 * Find set of nearest neighbors to vec[0:dim-1]. Their indices are stored inside
+		 * the result object.
+		 *
+		 * Params:
+		 *     result = the result object in which the indices of the nearest-neighbors are stored
+		 *     vec = the vector for which to search the nearest neighbors
+		 *
+		 * \tparam RESULTSET Should be any ResultSet<DistanceType>
+         * \return  True if the requested neighbors could be found.
+		 * \sa knnSearch, radiusSearch
+		 */
+		template <typename RESULTSET>
+		bool findNeighbors(RESULTSET& result, const ElementType* vec, const SearchParams& searchParams) const
+		{
+			for(size_t i = 0; i < treeCount; i++)
+			{
+				index[i].findNeighbors(result, &vec[0], searchParams);
+			}
+			return result.full();
+		}
+
+	}; 
+
+	/** An L2-metric KD-tree adaptor for working with data directly stored in an Eigen Matrix, without duplicating the data storage.
+	  *  Each row in the matrix represents a point in the state space.
+	  *
+	  *  Example of usage:
+	  * \code
+	  * 	Eigen::Matrix<num_t,Dynamic,Dynamic>  mat;
+	  * 	// Fill out "mat"...
+	  *
+	  * 	typedef KDTreeEigenMatrixAdaptor< Eigen::Matrix<num_t,Dynamic,Dynamic> >  my_kd_tree_t;
+	  * 	const int max_leaf = 10;
+	  * 	my_kd_tree_t   mat_index(mat, max_leaf );
+	  * 	mat_index.index->buildIndex();
+	  * 	mat_index.index->...
+	  * \endcode
+	  *
+	  *  \tparam DIM If set to >0, it specifies a compile-time fixed dimensionality for the points in the data set, allowing more compiler optimizations.
+	  *  \tparam Distance The distance metric to use: 
