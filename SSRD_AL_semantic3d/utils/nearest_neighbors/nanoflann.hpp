@@ -1799,4 +1799,49 @@ namespace nanoflann
 	  * \endcode
 	  *
 	  *  \tparam DIM If set to >0, it specifies a compile-time fixed dimensionality for the points in the data set, allowing more compiler optimizations.
-	  *  \tparam Distance The distance metric to use: 
+	  *  \tparam Distance The distance metric to use: nanoflann::metric_L1, nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc.
+	  */
+	template <class MatrixType, class Distance = nanoflann::metric_L2>
+	struct KDTreeEigenMatrixAdaptor
+	{
+		typedef KDTreeEigenMatrixAdaptor<MatrixType,Distance> self_t;
+		typedef typename MatrixType::Scalar              num_t;
+		typedef typename MatrixType::Index IndexType;
+		typedef typename Distance::template traits<num_t,self_t>::distance_t metric_t;
+		typedef KDTreeSingleIndexAdaptor< metric_t,self_t, MatrixType::ColsAtCompileTime,IndexType>  index_t;
+
+		index_t* index; //! The kd-tree index for the user to call its methods as usual with any other FLANN index.
+
+		/// Constructor: takes a const ref to the matrix object with the data points
+		KDTreeEigenMatrixAdaptor(const MatrixType &mat, const int leaf_max_size = 10) : m_data_matrix(mat)
+		{
+			const IndexType dims = mat.cols();
+			index = new index_t( dims, *this /* adaptor */, nanoflann::KDTreeSingleIndexAdaptorParams(leaf_max_size ) );
+			index->buildIndex();
+		}
+	public:
+		/** Deleted copy constructor */
+		KDTreeEigenMatrixAdaptor(const self_t&) = delete;
+
+		~KDTreeEigenMatrixAdaptor() {
+			delete index;
+		}
+
+		const MatrixType &m_data_matrix;
+
+		/** Query for the \a num_closest closest points to a given point (entered as query_point[0:dim-1]).
+		  *  Note that this is a short-cut method for index->findNeighbors().
+		  *  The user can also call index->... methods as desired.
+		  * \note nChecks_IGNORED is ignored but kept for compatibility with the original FLANN interface.
+		  */
+		inline void query(const num_t *query_point, const size_t num_closest, IndexType *out_indices, num_t *out_distances_sq, const int /* nChecks_IGNORED */ = 10) const
+		{
+			nanoflann::KNNResultSet<num_t, IndexType> resultSet(num_closest);
+			resultSet.init(out_indices, out_distances_sq);
+			index->findNeighbors(resultSet, query_point, nanoflann::SearchParams());
+		}
+
+		/** @name Interface expected by KDTreeSingleIndexAdaptor
+		  * @{ */
+
+		const self_t & derive
