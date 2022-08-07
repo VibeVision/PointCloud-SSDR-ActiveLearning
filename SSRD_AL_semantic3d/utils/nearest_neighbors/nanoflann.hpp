@@ -1844,4 +1844,38 @@ namespace nanoflann
 		/** @name Interface expected by KDTreeSingleIndexAdaptor
 		  * @{ */
 
-		const self_t & derive
+		const self_t & derived() const {
+			return *this;
+		}
+		self_t & derived()       {
+			return *this;
+		}
+
+		// Must return the number of data points
+		inline size_t kdtree_get_point_count() const {
+			return m_data_matrix.rows();
+		}
+
+		// Returns the dim'th component of the idx'th point in the class:
+		inline num_t kdtree_get_pt(const IndexType idx, int dim) const {
+			return m_data_matrix.coeff(idx, IndexType(dim));
+		}
+
+		// Optional bounding-box computation: return false to default to a standard bbox computation loop.
+		//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+		//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+		template <class BBOX>
+		bool kdtree_get_bbox(BBOX& /*bb*/) const {
+			return false;
+		}
+
+		/** @} */
+
+	}; // end of KDTreeEigenMatrixAdaptor
+	/** @} */
+
+/** @} */ // end of grouping
+} // end of NS
+
+
+#endif /* NANOFLANN_HPP_ */
